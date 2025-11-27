@@ -36,7 +36,7 @@ exports.createRoom = async (req, res, next) => {
 
     const rtcRole =
       role.toLowerCase() === "subscriber" ? RtcRole.SUBSCRIBER : RtcRole.PUBLISHER;
-    const expirationTimeInSeconds = 5 * 60; // 5 minutes 86400; // 24 hours
+    const expirationTimeInSeconds = 60 * 60; // 5 minutes 86400; // 24 hours
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
 

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -24,22 +25,35 @@
             width: 100vw;
             height: 100vh;
             display: grid;
-            grid-template-rows: 1fr 1fr;
+            grid-template-rows: 1fr auto;
             gap: 15px;
             padding: 15px;
         }
 
+        .videos-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            height: 100%;
+        }
+
         .video-section {
-            display: flex;
-            flex-direction: column;
             background: white;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .bottom-controls {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         }
 
         .video-display {
-            flex: 1;
+            width: 100%;
+            height: 100%;
             background: #000;
             position: relative;
             display: flex;
@@ -82,61 +96,29 @@
         .controls-panel {
             padding: 20px;
             background: #f9f9f9;
-            border-top: 1px solid #ddd;
             display: flex;
             flex-direction: column;
             gap: 15px;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        .form-group {
-            margin-bottom: 10px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 6px;
-            color: #333;
-            font-weight: 500;
-            font-size: 13px;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 13px;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .form-group input:disabled {
-            background: #e9ecef;
-            cursor: not-allowed;
         }
 
         .button-group {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
+            justify-content: center;
         }
 
         button {
             flex: 1;
-            padding: 10px 15px;
+            padding: 12px 20px;
             border: none;
             border-radius: 6px;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            min-width: 80px;
+            min-width: 120px;
+            max-width: 200px;
         }
 
         .btn-primary {
@@ -172,20 +154,6 @@
             transform: none;
         }
 
-        .toggle-btn {
-            background: #ffc107;
-            color: #333;
-        }
-
-        .toggle-btn:hover:not(:disabled) {
-            background: #e0a800;
-        }
-
-        .toggle-btn.off {
-            background: #6c757d;
-            color: white;
-        }
-
         .info-box {
             background: #e7f3ff;
             border-left: 4px solid #667eea;
@@ -194,6 +162,7 @@
             font-size: 13px;
             color: #333;
             line-height: 1.4;
+            text-align: center;
         }
 
         .info-box.success {
@@ -214,122 +183,81 @@
             color: #856404;
         }
 
-        .share-section {
-            display: none;
-            background: #f0f0f0;
-            padding: 12px;
-            border-radius: 4px;
-            display: flex;
-            gap: 8px;
-        }
-
-        .share-section input {
-            flex: 1;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-
-        .share-section button {
-            padding: 8px 12px;
-            font-size: 12px;
-            min-width: auto;
-        }
-
         .remote-info {
             font-size: 13px;
             color: #666;
             padding: 12px;
             background: #f5f5f5;
             border-radius: 4px;
-        }
-
-        @media (max-width: 1024px) {
-            .controls-panel {
-                max-height: 150px;
-            }
+            text-align: center;
         }
 
         @media (max-width: 768px) {
+            .videos-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 1fr;
+            }
+
             .container {
                 padding: 10px;
                 gap: 10px;
             }
 
-            .controls-panel {
-                padding: 15px;
-                max-height: 120px;
-            }
-
             button {
                 font-size: 12px;
-                padding: 8px 12px;
-            }
-
-            .button-group {
-                gap: 8px;
+                padding: 10px 15px;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
-        <!-- Top Screen - User 1 (Your Video) -->
-        <div class="video-section">
-            <div class="video-display" id="localVideoContainer">
-                <div class="video-label">📱 You (User 1)</div>
-                <div id="local-video"></div>
+        <!-- Videos Container - Top -->
+        <div class="videos-container">
+            <!-- User 1 Video -->
+            <div class="video-section">
+                <div class="video-display" id="localVideoContainer">
+                    <div class="video-label">📱 You (User 1)</div>
+                    <div id="local-video"></div>
+                </div>
             </div>
+
+            <!-- User 2 Video -->
+            <div class="video-section">
+                <div class="video-display" id="remoteVideoContainer">
+                    <div class="video-label">🎥 User 2 (Remote)</div>
+                    <div id="remote-video"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls Panel - Bottom -->
+        <div class="bottom-controls">
             <div class="controls-panel">
-                <div class="form-group">
-                    <label for="channelName">Channel Name:</label>
-                    <input type="text" id="channelName" placeholder="e.g., room-123" value="agora-video-call-demo">
-                </div>
-
-                <div class="form-group">
-                    <label for="userId">Your Name:</label>
-                    <input type="text" id="userId" placeholder="Enter your name" value="12345">
-                </div>
-
                 <div class="button-group">
                     <button class="btn-primary" id="joinBtn" onclick="joinCall()">Join Call</button>
                     <button class="btn-danger" id="leaveBtn" onclick="leaveCall()" disabled>Leave</button>
                 </div>
 
-                <div class="button-group">
-                    <button class="toggle-btn" id="micBtn" onclick="toggleMic()" disabled>🎤 Mic: ON</button>
-                    <button class="toggle-btn" id="camBtn" onclick="toggleCamera()" disabled style="display: none;">📹 Cam: ON</button>
-                </div>
-
-                <div class="share-section" id="shareLinkSection">
-                    <input type="text" id="shareLink" readonly value="">
-                    <button class="btn-primary" onclick="copyLink()">Copy</button>
-                </div>
-
-                <div class="info-box" id="infoBox">
-                    ℹ️ Enter channel name and click "Join Call" to start
-                </div>
-            </div>
-        </div>
-
-        <!-- Bottom Screen - User 2 (Remote User Video) -->
-        <div class="video-section">
-            <div class="video-display" id="remoteVideoContainer">
-                <div class="video-label">🎥 User 2 (Remote)</div>
-                <div id="remote-video"></div>
-            </div>
-            <div class="controls-panel">
                 <div class="remote-info" id="remoteUserInfo">
                     ⏳ Waiting for remote user to join...
                 </div>
+
+                <!-- <div class="info-box" id="infoBox">
+                    ℹ️ Click "Join Call" to start
+                </div> -->
             </div>
         </div>
     </div>
 
     <script>
+        // Hardcoded configuration
+        const CHANNEL_NAME = 'agora-video-call-demo';
+        const USER_ID = '12345';
+
         const config = {
-            backendUrl: 'https://agora-api-qthb.onrender.com',
+            backendUrl: 'http://127.0.0.1:3000',
             appId: null
         };
 
@@ -367,9 +295,9 @@
                     uid,
                     role: 'publisher'
                 });
-                console.log('App response:', JSON.stringify(response));
+                console.log('Token response:', response.data);
 
-                config.appId = response.data.appId;
+                config.appId = response.data.data.appId;
                 return response.data.data.rtcToken;
             } catch (error) {
                 console.error('Failed to get token:', error);
@@ -380,13 +308,8 @@
 
         async function joinCall() {
             try {
-                const channelName = document.getElementById('channelName').value.trim();
-                const userId = document.getElementById('userId').value.trim() || 'User-' + Math.floor(Math.random() * 10000);
-
-                if (!channelName) {
-                    showInfo('Please enter a channel name', 'error');
-                    return;
-                }
+                const channelName = CHANNEL_NAME;
+                const userId = USER_ID;
 
                 currentChannelName = channelName;
                 currentUserId = userId;
@@ -411,15 +334,12 @@
                     console.log('Camera created successfully');
                 } catch (videoError) {
                     console.warn('Camera not available:', videoError.message);
-                    showInfo('⚠️ Camera not found. Joining with audio only (mic is mandatory).', 'warning');
-                    document.getElementById('camBtn').style.display = 'none';
+                    showInfo('⚠️ Camera not found. Joining with audio only.', 'warning');
                 }
 
                 // Try to create microphone track (MANDATORY)
-                let audioTrackCreated = false;
                 try {
                     localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-                    audioTrackCreated = true;
                     console.log('Microphone created successfully');
                 } catch (audioError) {
                     console.error('Microphone not available:', audioError.message);
@@ -431,10 +351,8 @@
                 if (hasCamera) {
                     await localVideoTrack.play('local-video');
                 } else {
-                    // Show "no camera" placeholder
                     const localVideoDiv = document.getElementById('local-video');
                     localVideoDiv.innerHTML = '<div class="no-camera">📵<br>No Camera Available<br>✅ Audio Connected</div>';
-                    document.getElementById('camBtn').style.display = 'none';
                 }
 
                 // Join channel with available tracks
@@ -449,7 +367,6 @@
 
                 isCallActive = true;
                 updateUI(true);
-                updateShareLink();
                 showInfo(`✅ Joined channel: ${channelName}${!hasCamera ? ' (Audio only)' : ''}`, 'success');
             } catch (error) {
                 console.error('Failed to join call:', error);
@@ -509,8 +426,6 @@
                 isCallActive = false;
                 hasCamera = false;
                 updateUI(false);
-                document.getElementById('shareLinkSection').style.display = 'none';
-                document.getElementById('camBtn').style.display = 'inline-flex';
                 showInfo('✅ Left the call', 'success');
             } catch (error) {
                 console.error('Failed to leave call:', error);
@@ -518,48 +433,9 @@
             }
         }
 
-        async function toggleMic() {
-            if (!localAudioTrack) return;
-            const isMicOn = localAudioTrack.enabled;
-            await localAudioTrack.setEnabled(!isMicOn);
-            const btn = document.getElementById('micBtn');
-            btn.textContent = !isMicOn ? '🎤 Mic: ON' : '🎤 Mic: OFF';
-            btn.classList.toggle('off', isMicOn);
-        }
-
-        async function toggleCamera() {
-            if (!localVideoTrack || !hasCamera) return;
-            const isCamOn = localVideoTrack.enabled;
-            await localVideoTrack.setEnabled(!isCamOn);
-            const btn = document.getElementById('camBtn');
-            btn.textContent = !isCamOn ? '📹 Cam: ON' : '📹 Cam: OFF';
-            btn.classList.toggle('off', isCamOn);
-        }
-
         function updateUI(isInCall) {
             document.getElementById('joinBtn').disabled = isInCall;
             document.getElementById('leaveBtn').disabled = !isInCall;
-            document.getElementById('micBtn').disabled = !isInCall;
-            if (hasCamera) {
-                document.getElementById('camBtn').disabled = !isInCall;
-            }
-            document.getElementById('channelName').disabled = isInCall;
-            document.getElementById('userId').disabled = isInCall;
-        }
-
-        function updateShareLink() {
-            const channelName = document.getElementById('channelName').value;
-            const baseUrl = window.location.origin + window.location.pathname;
-            const shareUrl = `${baseUrl}?channel=${channelName}`;
-            document.getElementById('shareLink').value = shareUrl;
-            document.getElementById('shareLinkSection').style.display = 'flex';
-        }
-
-        function copyLink() {
-            const shareLink = document.getElementById('shareLink');
-            shareLink.select();
-            document.execCommand('copy');
-            showInfo('✅ Link copied to clipboard!', 'success');
         }
 
         function showInfo(message, type = 'info') {
@@ -571,22 +447,10 @@
             }
         }
 
-        window.addEventListener('load', () => {
-            const params = new URLSearchParams(window.location.search);
-            const channel = params.get('channel');
-            if (channel) {
-                document.getElementById('channelName').value = channel;
-                showInfo('📌 Channel name auto-filled from link. Click "Join Call" to enter.', 'info');
-            }
-
-            // Auto-generate user ID
-            const userIdInput = document.getElementById('userId');
-            if (!userIdInput.value) {
-                alert("Please enter User ID");
-                return;
-            }
-
-        });
+        // window.addEventListener('load', () => {
+        //     showInfo(`📌 Ready to join channel: ${CHANNEL_NAME} as User: ${USER_ID}`, 'info');
+        // });
     </script>
 </body>
+
 </html>
