@@ -1,7 +1,6 @@
 require("dotenv").config();
 const { RtcTokenBuilder, RtcRole, RtmTokenBuilder } = require("agora-token");
 
-
 /**
  * Generate both RTC and RTM tokens in a single request
  * @param {string} channelName - Channel name

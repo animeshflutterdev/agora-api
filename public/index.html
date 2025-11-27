@@ -154,35 +154,6 @@
             transform: none;
         }
 
-        .info-box {
-            background: #e7f3ff;
-            border-left: 4px solid #667eea;
-            padding: 12px;
-            border-radius: 4px;
-            font-size: 13px;
-            color: #333;
-            line-height: 1.4;
-            text-align: center;
-        }
-
-        .info-box.success {
-            background: #d4edda;
-            border-left-color: #28a745;
-            color: #155724;
-        }
-
-        .info-box.error {
-            background: #f8d7da;
-            border-left-color: #dc3545;
-            color: #721c24;
-        }
-
-        .info-box.warning {
-            background: #fff3cd;
-            border-left-color: #ffc107;
-            color: #856404;
-        }
-
         .remote-info {
             font-size: 13px;
             color: #666;
@@ -243,10 +214,6 @@
                 <div class="remote-info" id="remoteUserInfo">
                     ⏳ Waiting for remote user to join...
                 </div>
-
-                <!-- <div class="info-box" id="infoBox">
-                    ℹ️ Click "Join Call" to start
-                </div> -->
             </div>
         </div>
     </div>
@@ -270,6 +237,7 @@
         let currentUserId = '';
         let isCallActive = false;
         let hasCamera = false;
+        let recordingData = null; // Store recording session data
 
         async function initializeAgora() {
             try {
@@ -285,7 +253,7 @@
                 console.log('Agora client initialized');
             } catch (error) {
                 console.error('Failed to initialize Agora:', error);
-                showInfo('Failed to initialize Agora', 'error');
+                updateRemoteInfo('Failed to initialize Agora', 'error');
             }
         }
 
@@ -302,7 +270,7 @@
                 return response.data.data.rtcToken;
             } catch (error) {
                 console.error('Failed to get token:', error);
-                showInfo('Failed to get token from backend', 'error');
+                updateRemoteInfo('Failed to get token from backend', 'error');
                 throw error;
             }
         }
@@ -335,7 +303,7 @@
                     console.log('Camera created successfully');
                 } catch (videoError) {
                     console.warn('Camera not available:', videoError.message);
-                    showInfo('⚠️ Camera not found. Joining with audio only.', 'warning');
+                    updateRemoteInfo('⚠️ Camera not found. Joining with audio only.', 'warning');
                 }
 
                 // Try to create microphone track (MANDATORY)
@@ -344,7 +312,7 @@
                     console.log('Microphone created successfully');
                 } catch (audioError) {
                     console.error('Microphone not available:', audioError.message);
-                    showInfo('❌ Microphone is mandatory and not found!', 'error');
+                    updateRemoteInfo('❌ Microphone is mandatory and not found!', 'error');
                     return;
                 }
 
@@ -368,10 +336,25 @@
 
                 isCallActive = true;
                 updateUI(true);
-                showInfo(`✅ Joined channel: ${channelName}${!hasCamera ? ' (Audio only)' : ''}`, 'success');
+                updateRemoteInfo(`✅ Joined channel: ${channelName}${!hasCamera ? ' (Audio only)' : ''}`, 'success');
+
+                // Start recording
+                try {
+                    const recorderUid = 999999; // Fixed UID for recorder bot
+                    const recordingResponse = await axios.post(`${config.backendUrl}/agora/start-recording`, {
+                        channelName: channelName,
+                        uid: recorderUid
+                    });
+                    recordingData = recordingResponse.data;
+                    console.log('Recording started:', recordingData);
+                    updateRemoteInfo('🔴 Recording started', 'success');
+                } catch (recordError) {
+                    console.error('Failed to start recording:', recordError);
+                    updateRemoteInfo('⚠️ Recording failed to start', 'warning');
+                }
             } catch (error) {
                 console.error('Failed to join call:', error);
-                showInfo(`❌ Error: ${error.message}`, 'error');
+                updateRemoteInfo(`❌ Error: ${error.message}`, 'error');
                 updateUI(false);
             }
         }
@@ -408,6 +391,24 @@
 
         async function leaveCall() {
             try {
+                // Stop recording first
+                if (recordingData) {
+                    try {
+                        const recorderUid = 999999;
+                        await axios.post(`${config.backendUrl}/agora/stop-recording`, {
+                            channelName: currentChannelName,
+                            uid: recorderUid,
+                            resourceId: recordingData.resourceId,
+                            sid: recordingData.sid
+                        });
+                        console.log('Recording stopped');
+                        updateRemoteInfo('⏹️ Recording stopped', 'success');
+                        recordingData = null;
+                    } catch (recordError) {
+                        console.error('Failed to stop recording:', recordError);
+                    }
+                }
+
                 if (localAudioTrack) {
                     localAudioTrack.stop();
                     localAudioTrack.close();
@@ -427,10 +428,10 @@
                 isCallActive = false;
                 hasCamera = false;
                 updateUI(false);
-                showInfo('✅ Left the call', 'success');
+                updateRemoteInfo('✅ Left the call', 'success');
             } catch (error) {
                 console.error('Failed to leave call:', error);
-                showInfo('Failed to leave call', 'error');
+                updateRemoteInfo('Failed to leave call', 'error');
             }
         }
 
@@ -439,18 +440,10 @@
             document.getElementById('leaveBtn').disabled = !isInCall;
         }
 
-        function showInfo(message, type = 'info') {
-            const infoBox = document.getElementById('infoBox');
-            infoBox.textContent = message;
-            infoBox.className = 'info-box';
-            if (type) {
-                infoBox.classList.add(type);
-            }
+        function updateRemoteInfo(message, type = 'info') {
+            const infoDiv = document.getElementById('remoteUserInfo');
+            infoDiv.textContent = message;
         }
-
-        // window.addEventListener('load', () => {
-        //     showInfo(`📌 Ready to join channel: ${CHANNEL_NAME} as User: ${USER_ID}`, 'info');
-        // });
     </script>
 </body>
 
