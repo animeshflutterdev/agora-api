@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agora Video Calling</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.0/axios.min.js"></script>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1400px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            font-size: 14px;
+            color: #666;
+            padding: 8px 16px;
+            background: #f5f5f5;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+
+        .setup-panel {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            height: fit-content;
+        }
+
+        .setup-panel h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group input:disabled {
+            background: #e9ecef;
+            cursor: not-allowed;
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .video-box {
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            aspect-ratio: 16/9;
+            position: relative;
+        }
+
+        .video-box video,
+        .video-box div[id$="-video"] {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 10;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+        }
+
+        .btn-danger:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .toggle-btn {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .toggle-btn:hover:not(:disabled) {
+            background: #e0a800;
+        }
+
+        .toggle-btn.off {
+            background: #6c757d;
+            color: white;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .share-link {
+            background: #f0f0f0;
+            padding: 12px;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .share-link input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .share-link button {
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+
+        .remote-users {
+            font-size: 13px;
+            color: #666;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+
+        .user-item {
+            background: #f5f5f5;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-top: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .setup-panel {
+                max-width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .video-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎥 Agora Video Conference</h1>
+            <div class="status" id="status">Offline</div>
+        </div>
+
+        <div class="main-content">
+            <div class="setup-panel">
+                <h2>Join Call</h2>
+
+                <div class="info-box">
+                    ℹ️ <strong>How to join:</strong><br>
+                    1. Set a channel name<br>
+                    2. Click "Join Call"<br>
+                    3. Share the link or channel name with others<br>
+                    4. Others use same channel name to join
+                </div>
+
+                <div class="form-group">
+                    <label for="channelName">Channel Name:</label>
+                    <input type="text" id="channelName" placeholder="e.g., meeting-123" value="agora-video-call">
+                </div>
+
+                <div class="form-group">
+                    <label for="userId">Your Name/ID:</label>
+                    <input type="text" id="userId" placeholder="Enter your name" value="">
+                </div>
+
+                <div class="form-group">
+                    <label for="backendUrl">Backend URL:</label>
+                    <input type="text" id="backendUrl" placeholder="http://localhost:3000"
+                        value="http://localhost:3000">
+                </div>
+
+                <div class="controls">
+                    <button class="btn-primary" id="joinBtn" onclick="joinCall()" style="width: 100%;">Join
+                        Call</button>
+                </div>
+
+                <div class="controls">
+                    <button class="toggle-btn" id="micBtn" onclick="toggleMic()" disabled style="width: 100%;">🎤 Mic:
+                        ON</button>
+                    <button class="toggle-btn" id="camBtn" onclick="toggleCamera()" disabled style="width: 100%;">📹
+                        Camera: ON</button>
+                    <button class="btn-danger" id="leaveBtn" onclick="leaveCall()" disabled style="width: 100%;">Leave
+                        Call</button>
+                </div>
+
+                <div class="share-link" id="shareLinkSection" style="display: none;">
+                    <input type="text" id="shareLink" readonly value="">
+                    <button class="btn-primary" onclick="copyLink()">Copy</button>
+                </div>
+
+                <div class="remote-users" id="remoteUsersList" style="display: none;">
+                    <strong>Connected Users:</strong>
+                    <div id="usersList"></div>
+                </div>
+            </div>
+
+            <div>
+                <div class="video-grid">
+                    <div class="video-box">
+                        <div class="video-label">📱 Your Video</div>
+                        <div id="local-video"></div>
+                    </div>
+                    <div id="remoteVideosContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const config = {
+            backendUrl: 'http://localhost:3000',
+            appId: null
+        };
+
+        let agoraClient = null;
+        let localAudioTrack = null;
+        let localVideoTrack = null;
+        let remoteUsers = {};
+        let currentChannelName = '';
+        let currentUserId = '';
+        let isCallActive = false;
+
+        async function initializeAgora() {
+            try {
+                agoraClient = AgoraRTC.createClient({
+                    mode: 'rtc',
+                    codec: 'vp8'
+                });
+
+                agoraClient.on('user-published', handleUserPublished);
+                agoraClient.on('user-unpublished', handleUserUnpublished);
+                agoraClient.on('user-left', handleUserLeft);
+
+                console.log('Agora client initialized');
+            } catch (error) {
+                console.error('Failed to initialize Agora:', error);
+                showInfo('Failed to initialize Agora', 'error');
+            }
+        }
+
+        async function getToken(channelName, uid) {
+            try {
+                const response = await axios.post(`${config.backendUrl}/agora/create_room`, {
+                    channelName,
+                    uid,
+                    role: 'publisher'
+                });
+                console.log('App response:', JSON.stringify(response));
+
+                config.appId = response.data.data.appId;
+                return response.data.data.token;
+            } catch (error) {
+                console.error('Failed to get token:', error);
+                showInfo('Failed to get token from backend. Check Backend URL.', 'error');
+                throw error;
+            }
+        }
+
+        async function joinCall() {
+            try {
+                const channelName = document.getElementById('channelName').value.trim();
+                const userId = document.getElementById('userId').value.trim() || 'User-' + Math.floor(Math.random() * 10000);
+                config.backendUrl = document.getElementById('backendUrl').value.trim();
+
+                if (!channelName) {
+                    showInfo('Please enter a channel name', 'error');
+                    return;
+                }
+
+                currentChannelName = channelName;
+                currentUserId = userId;
+
+                if (!agoraClient) {
+                    await initializeAgora();
+                }
+
+                const uid = Math.floor(Math.random() * 100000);
+                const token = await getToken(channelName, uid);
+
+                let videoTrackCreated = false;
+                try {
+                    localVideoTrack = await AgoraRTC.createCameraVideoTrack({
+                        encoderConfig: {
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        }
+                    });
+                    videoTrackCreated = true;
+                } catch (videoError) {
+                    console.warn('Camera not available:', videoError.message);
+                    showInfo('⚠️ Camera not found. Joining with audio only.', 'warning');
+                }
+
+                let audioTrackCreated = false;
+                try {
+                    localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                    audioTrackCreated = true;
+                } catch (audioError) {
+                    console.warn('Microphone not available:', audioError.message);
+                    showInfo('⚠️ Microphone not found. Joining with video only.', 'warning');
+                }
+
+                if (!videoTrackCreated && !audioTrackCreated) {
+                    showInfo('❌ Neither camera nor microphone found.', 'error');
+                    return;
+                }
+
+                if (videoTrackCreated) {
+                    await localVideoTrack.play('local-video');
+                }
+
+                await agoraClient.join(config.appId, channelName, token, uid);
+
+                const tracksToPublish = [];
+                if (audioTrackCreated) tracksToPublish.push(localAudioTrack);
+                if (videoTrackCreated) tracksToPublish.push(localVideoTrack);
+
+                await agoraClient.publish(tracksToPublish);
+
+                isCallActive = true;
+                updateUI(true);
+                updateShareLink();
+                showInfo(`✅ Successfully joined channel: ${channelName}`, 'success');
+                updateStatus('Connected');
+            } catch (error) {
+                console.error('Failed to join call:', error);
+                showInfo(`❌ Error: ${error.message}`, 'error');
+                updateUI(false);
+            }
+        }
+
+        async function handleUserPublished(user, mediaType) {
+            await agoraClient.subscribe(user, mediaType);
+            remoteUsers[user.uid] = user;
+
+            if (mediaType === 'video') {
+                const remoteVideoTrack = user.videoTrack;
+                const videoContainer = document.createElement('div');
+                videoContainer.id = `remote-video-${user.uid}`;
+                videoContainer.className = 'video-box';
+                videoContainer.innerHTML = `
+                    <div class="video-label">👤 User ${user.uid}</div>
+                    <div id="video-${user.uid}"></div>
+                `;
+                document.getElementById('remoteVideosContainer').appendChild(videoContainer);
+                remoteVideoTrack.play(`video-${user.uid}`);
+            }
+
+            if (mediaType === 'audio') {
+                const remoteAudioTrack = user.audioTrack;
+                remoteAudioTrack.play();
+            }
+
+            updateRemoteUsersList();
+        }
+
+        async function handleUserUnpublished(user) {
+            delete remoteUsers[user.uid];
+            const videoElement = document.getElementById(`remote-video-${user.uid}`);
+            if (videoElement) {
+                videoElement.remove();
+            }
+            updateRemoteUsersList();
+        }
+
+        function handleUserLeft(user) {
+            delete remoteUsers[user.uid];
+            const videoElement = document.getElementById(`remote-video-${user.uid}`);
+            if (videoElement) {
+                videoElement.remove();
+            }
+            updateRemoteUsersList();
+        }
+
+        async function leaveCall() {
+            try {
+                if (localAudioTrack) {
+                    localAudioTrack.stop();
+                    localAudioTrack.close();
+                }
+                if (localVideoTrack) {
+                    localVideoTrack.stop();
+                    localVideoTrack.close();
+                }
+
+                await agoraClient.leave();
+
+                document.getElementById('remoteVideosContainer').innerHTML = '';
+                remoteUsers = {};
+
+                isCallActive = false;
+                updateUI(false);
+                updateStatus('Offline');
+                document.getElementById('shareLinkSection').style.display = 'none';
+                document.getElementById('remoteUsersList').style.display = 'none';
+                showInfo('✅ Left the call');
+            } catch (error) {
+                console.error('Failed to leave call:', error);
+                showInfo('Failed to leave call', 'error');
+            }
+        }
+
+        async function toggleMic() {
+            if (!localAudioTrack) return;
+            const isMicOn = localAudioTrack.enabled;
+            await localAudioTrack.setEnabled(!isMicOn);
+            const btn = document.getElementById('micBtn');
+            btn.textContent = !isMicOn ? '🎤 Mic: ON' : '🎤 Mic: OFF';
+            btn.classList.toggle('off', isMicOn);
+        }
+
+        async function toggleCamera() {
+            if (!localVideoTrack) return;
+            const isCamOn = localVideoTrack.enabled;
+            await localVideoTrack.setEnabled(!isCamOn);
+            const btn = document.getElementById('camBtn');
+            btn.textContent = !isCamOn ? '📹 Camera: ON' : '📹 Camera: OFF';
+            btn.classList.toggle('off', isCamOn);
+        }
+
+        function updateUI(isInCall) {
+            document.getElementById('joinBtn').disabled = isInCall;
+            document.getElementById('leaveBtn').disabled = !isInCall;
+            document.getElementById('micBtn').disabled = !isInCall;
+            document.getElementById('camBtn').disabled = !isInCall;
+            document.getElementById('channelName').disabled = isInCall;
+            document.getElementById('userId').disabled = isInCall;
+        }
+
+        function updateStatus(text) {
+            const status = document.getElementById('status');
+            status.textContent = text;
+            status.className = 'status';
+            if (text === 'Connected') {
+                status.classList.add('connected');
+            }
+        }
+
+        function updateShareLink() {
+            const channelName = document.getElementById('channelName').value;
+            const baseUrl = window.location.origin + window.location.pathname;
+            const shareUrl = `${baseUrl}?channel=${channelName}`;
+            document.getElementById('shareLink').value = shareUrl;
+            document.getElementById('shareLinkSection').style.display = 'flex';
+        }
+
+        function copyLink() {
+            const shareLink = document.getElementById('shareLink');
+            shareLink.select();
+            document.execCommand('copy');
+            showInfo('✅ Link copied to clipboard!', 'success');
+        }
+
+        function updateRemoteUsersList() {
+            const usersList = document.getElementById('usersList');
+            if (Object.keys(remoteUsers).length === 0) {
+                document.getElementById('remoteUsersList').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('remoteUsersList').style.display = 'block';
+            usersList.innerHTML = Object.keys(remoteUsers).map(uid =>
+                `<div class="user-item"><span>👤 User ${uid}</span><span style="color: #28a745;">● Connected</span></div>`
+            ).join('');
+        }
+
+        function showInfo(message, type = 'info') {
+            const infoSection = document.querySelector('.info-box');
+            if (!infoSection) {
+                const newInfo = document.createElement('div');
+                newInfo.className = 'info-box';
+                document.querySelector('.setup-panel').insertBefore(newInfo, document.querySelector('.form-group'));
+            }
+            const infoToUpdate = document.querySelector('.info-box');
+            infoToUpdate.textContent = message;
+            infoToUpdate.style.background = type === 'error' ? '#f8d7da' : type === 'success' ? '#d4edda' : type === 'warning' ? '#fff3cd' : '#e7f3ff';
+            infoToUpdate.style.borderLeftColor = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : type === 'warning' ? '#ffc107' : '#667eea';
+        }
+
+        window.addEventListener('load', () => {
+            const params = new URLSearchParams(window.location.search);
+            const channel = params.get('channel');
+            if (channel) {
+                document.getElementById('channelName').value = channel;
+                showInfo('📌 Channel name auto-filled from link. Click "Join Call" to enter.', 'info');
+            }
+        });
+    </script>
+</body>
+
+</html>
