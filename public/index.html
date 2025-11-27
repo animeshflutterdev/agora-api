@@ -255,9 +255,10 @@
         // Hardcoded configuration
         const CHANNEL_NAME = 'agora-video-call-demo';
         const USER_ID = '12345';
+        const Live = false;
 
         const config = {
-            backendUrl: 'http://127.0.0.1:3000',
+            backendUrl: Live ? 'https://agora-api-qthb.onrender.com' : 'http://127.0.0.1:3000',
             appId: null
         };
 
