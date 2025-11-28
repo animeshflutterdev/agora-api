@@ -210,6 +210,10 @@
                     <button class="btn-primary" id="joinBtn" onclick="joinCall()">Join Call</button>
                     <button class="btn-danger" id="leaveBtn" onclick="leaveCall()" disabled>Leave</button>
                 </div>
+                <div class="button-group" style="margin-top: 10px;">
+                    <button class="btn-primary" id="micBtn" onclick="toggleMic()" disabled>Mic: On</button>
+                    <button class="btn-primary" id="camBtn" onclick="toggleCam()" disabled>Cam: On</button>
+                </div>
 
                 <div class="remote-info" id="remoteUserInfo">
                     ⏳ Waiting for remote user to join...
@@ -221,7 +225,6 @@
     <script>
         // Hardcoded configuration
         const CHANNEL_NAME = 'agora-video-call-demo';
-        const USER_ID = '12345';
         const Live = false;
 
         const config = {
@@ -278,16 +281,25 @@
         async function joinCall() {
             try {
                 const channelName = CHANNEL_NAME;
-                const userId = USER_ID;
+                // Generate random User ID
+                const randomUserId = Math.floor(Math.random() * 100000);
+                const userId = randomUserId.toString();
 
                 currentChannelName = channelName;
                 currentUserId = userId;
+
+                // Update local video label
+                const localLabel = document.querySelector('#localVideoContainer .video-label');
+                if (localLabel) {
+                    localLabel.textContent = `📱 You (${userId})`;
+                }
 
                 if (!agoraClient) {
                     await initializeAgora();
                 }
 
-                const uid = Math.floor(Math.random() * 100000);
+                const uid = randomUserId;
+
                 const token = await getToken(channelName, uid);
 
                 // Try to create camera track (optional)
@@ -438,6 +450,35 @@
         function updateUI(isInCall) {
             document.getElementById('joinBtn').disabled = isInCall;
             document.getElementById('leaveBtn').disabled = !isInCall;
+            document.getElementById('micBtn').disabled = !isInCall;
+            document.getElementById('camBtn').disabled = !isInCall;
+
+            if (!isInCall) {
+                document.getElementById('micBtn').textContent = 'Mic: On';
+                document.getElementById('camBtn').textContent = 'Cam: On';
+                document.getElementById('micBtn').className = 'btn-primary';
+                document.getElementById('camBtn').className = 'btn-primary';
+            }
+        }
+
+        async function toggleMic() {
+            if (localAudioTrack) {
+                const isMuted = localAudioTrack.muted;
+                await localAudioTrack.setMuted(!isMuted);
+                const micBtn = document.getElementById('micBtn');
+                micBtn.textContent = isMuted ? 'Mic: On' : 'Mic: Off';
+                micBtn.className = isMuted ? 'btn-primary' : 'btn-danger';
+            }
+        }
+
+        async function toggleCam() {
+            if (localVideoTrack) {
+                const isMuted = localVideoTrack.muted;
+                await localVideoTrack.setMuted(!isMuted);
+                const camBtn = document.getElementById('camBtn');
+                camBtn.textContent = isMuted ? 'Cam: On' : 'Cam: Off';
+                camBtn.className = isMuted ? 'btn-primary' : 'btn-danger';
+            }
         }
 
         function updateRemoteInfo(message, type = 'info') {
