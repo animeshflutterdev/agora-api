@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agora Video Call - One to One</title>
+    <title>Agora Video Call - Host & Participant</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.0/axios.min.js"></script>
     <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
     <style>
@@ -82,6 +82,31 @@
             z-index: 10;
         }
 
+        .role-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            z-index: 10;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .role-badge.host {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+        }
+
+        .role-badge.participant {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+        }
+
         .no-camera {
             display: flex;
             flex-direction: column;
@@ -99,6 +124,47 @@
             display: flex;
             flex-direction: column;
             gap: 15px;
+        }
+
+        .role-selector {
+            display: flex;
+            gap: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #e0e0e0;
+        }
+
+        .role-selector label {
+            font-weight: 600;
+            color: #333;
+            font-size: 15px;
+        }
+
+        .role-selector input[type="radio"] {
+            margin-right: 8px;
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+
+        .role-option {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .role-option:hover {
+            background: #f5f5f5;
+        }
+
+        .role-option input:checked + label {
+            color: #667eea;
         }
 
         .button-group {
@@ -154,6 +220,10 @@
             transform: none;
         }
 
+        .btn-hidden {
+            display: none !important;
+        }
+
         .remote-info {
             font-size: 13px;
             color: #666;
@@ -161,6 +231,26 @@
             background: #f5f5f5;
             border-radius: 4px;
             text-align: center;
+        }
+
+        .admin-notice {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .participant-notice {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 14px;
         }
 
         @media (max-width: 768px) {
@@ -178,6 +268,11 @@
                 font-size: 12px;
                 padding: 10px 15px;
             }
+
+            .role-selector {
+                flex-direction: column;
+                gap: 10px;
+            }
         }
     </style>
 </head>
@@ -189,7 +284,8 @@
             <!-- User 1 Video -->
             <div class="video-section">
                 <div class="video-display" id="localVideoContainer">
-                    <div class="video-label">📱 You (User 1)</div>
+                    <div class="video-label">📱 You</div>
+                    <div class="role-badge" id="localRoleBadge"></div>
                     <div id="local-video"></div>
                 </div>
             </div>
@@ -197,7 +293,8 @@
             <!-- User 2 Video -->
             <div class="video-section">
                 <div class="video-display" id="remoteVideoContainer">
-                    <div class="video-label">🎥 User 2 (Remote)</div>
+                    <div class="video-label">🎥 Remote User</div>
+                    <div class="role-badge" id="remoteRoleBadge" style="display: none;"></div>
                     <div id="remote-video"></div>
                 </div>
             </div>
@@ -206,15 +303,35 @@
         <!-- Controls Panel - Bottom -->
         <div class="bottom-controls">
             <div class="controls-panel">
+                <!-- Role Selection -->
+                <div class="role-selector" id="roleSelector">
+                    <span style="font-weight: 700; color: #667eea;">Select Your Role:</span>
+                    <div class="role-option">
+                        <input type="radio" id="roleHost" name="userRole" value="host" checked>
+                        <label for="roleHost">👑 Host (Admin)</label>
+                    </div>
+                    <div class="role-option">
+                        <input type="radio" id="roleParticipant" name="userRole" value="participant">
+                        <label for="roleParticipant">👤 Participant</label>
+                    </div>
+                </div>
+
+                <!-- Role Notice -->
+                <div id="roleNotice"></div>
+
+                <!-- Join/Leave Buttons -->
                 <div class="button-group">
                     <button class="btn-primary" id="joinBtn" onclick="joinCall()">Join Call</button>
-                    <button class="btn-danger" id="leaveBtn" onclick="leaveCall()" disabled>Leave</button>
+                    <button class="btn-danger" id="leaveBtn" onclick="leaveCall()" disabled>Leave Call</button>
                 </div>
-                <div class="button-group" style="margin-top: 10px;">
+
+                <!-- Media Controls -->
+                <div class="button-group" id="mediaControls" style="margin-top: 10px;">
                     <button class="btn-primary" id="micBtn" onclick="toggleMic()" disabled>Mic: On</button>
                     <button class="btn-primary" id="camBtn" onclick="toggleCam()" disabled>Cam: On</button>
                 </div>
 
+                <!-- Remote User Info -->
                 <div class="remote-info" id="remoteUserInfo">
                     ⏳ Waiting for remote user to join...
                 </div>
@@ -238,9 +355,36 @@
         let remoteUsers = {};
         let currentChannelName = '';
         let currentUserId = '';
+        let currentUserRole = 'host'; // 'host' or 'participant'
         let isCallActive = false;
         let hasCamera = false;
-        let recordingData = null; // Store recording session data
+        let recordingData = null;
+
+        // Update UI based on role selection
+        document.querySelectorAll('input[name="userRole"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                currentUserRole = e.target.value;
+                updateRoleUI();
+            });
+        });
+
+        function updateRoleUI() {
+            const roleNotice = document.getElementById('roleNotice');
+            const localRoleBadge = document.getElementById('localRoleBadge');
+
+            if (currentUserRole === 'host') {
+                roleNotice.innerHTML = '<div class="admin-notice">👑 You are the HOST - You have full control including recording and ending the call</div>';
+                localRoleBadge.textContent = '👑 HOST';
+                localRoleBadge.className = 'role-badge host';
+            } else {
+                roleNotice.innerHTML = '<div class="participant-notice">👤 You are a PARTICIPANT - Limited controls available</div>';
+                localRoleBadge.textContent = '👤 PARTICIPANT';
+                localRoleBadge.className = 'role-badge participant';
+            }
+        }
+
+        // Initialize role UI
+        updateRoleUI();
 
         async function initializeAgora() {
             try {
@@ -260,12 +404,12 @@
             }
         }
 
-        async function getToken(channelName, uid) {
+        async function getToken(channelName, uid, role) {
             try {
                 const response = await axios.post(`${config.backendUrl}/agora/create_room`, {
                     channelName,
                     uid,
-                    role: 'publisher'
+                    role: 'publisher' // Both host and participant can publish
                 });
                 console.log('Token response:', response.data);
 
@@ -281,7 +425,6 @@
         async function joinCall() {
             try {
                 const channelName = CHANNEL_NAME;
-                // Generate random User ID
                 const randomUserId = Math.floor(Math.random() * 100000);
                 const userId = randomUserId.toString();
 
@@ -294,13 +437,15 @@
                     localLabel.textContent = `📱 You (${userId})`;
                 }
 
+                // Hide role selector after joining
+                document.getElementById('roleSelector').style.display = 'none';
+
                 if (!agoraClient) {
                     await initializeAgora();
                 }
 
                 const uid = randomUserId;
-
-                const token = await getToken(channelName, uid);
+                const token = await getToken(channelName, uid, currentUserRole);
 
                 // Try to create camera track (optional)
                 hasCamera = false;
@@ -333,7 +478,7 @@
                     await localVideoTrack.play('local-video');
                 } else {
                     const localVideoDiv = document.getElementById('local-video');
-                    localVideoDiv.innerHTML = '<div class="no-camera">📵<br>No Camera Available<br>✅ Audio Connected</div>';
+                    localVideoDiv.innerHTML = '<div class="no-camera">🔵<br>No Camera Available<br>✅ Audio Connected</div>';
                 }
 
                 // Join channel with available tracks
@@ -347,21 +492,36 @@
                 await agoraClient.publish(tracksToPublish);
 
                 isCallActive = true;
-                updateUI(true);
-                updateRemoteInfo(`✅ Joined channel: ${channelName}${!hasCamera ? ' (Audio only)' : ''}`, 'success');
-
-                // Recording is now handled in handleUserPublished
+                updateCallUI(true);
+                
+                const roleText = currentUserRole === 'host' ? '(HOST)' : '(PARTICIPANT)';
+                updateRemoteInfo(`✅ Joined as ${roleText}: ${channelName}${!hasCamera ? ' (Audio only)' : ''}`, 'success');
 
             } catch (error) {
                 console.error('Failed to join call:', error);
                 updateRemoteInfo(`❌ Error: ${error.message}`, 'error');
-                updateUI(false);
+                updateCallUI(false);
+                document.getElementById('roleSelector').style.display = 'flex';
             }
         }
 
         async function handleUserPublished(user, mediaType) {
             await agoraClient.subscribe(user, mediaType);
             remoteUsers[user.uid] = user;
+
+            // Show remote user's role badge
+            const remoteRoleBadge = document.getElementById('remoteRoleBadge');
+            remoteRoleBadge.style.display = 'block';
+            
+            // Determine remote user's role (in real app, this would come from server/metadata)
+            // For now, we'll show them as participant if we're host, and vice versa
+            if (currentUserRole === 'host') {
+                remoteRoleBadge.textContent = '👤 PARTICIPANT';
+                remoteRoleBadge.className = 'role-badge participant';
+            } else {
+                remoteRoleBadge.textContent = '👑 HOST';
+                remoteRoleBadge.className = 'role-badge host';
+            }
 
             if (mediaType === 'video') {
                 const remoteVideoTrack = user.videoTrack;
@@ -377,32 +537,30 @@
                 }
             }
 
-            // Check if we should start recording (Only if 2 users are present)
-            if (!recordingData && Object.keys(remoteUsers).length > 0) {
+            // Only HOST can start recording
+            if (currentUserRole === 'host' && !recordingData && Object.keys(remoteUsers).length > 0) {
                 const myUid = parseInt(currentUserId);
                 const remoteUid = parseInt(user.uid);
 
                 if (!isNaN(myUid) && !isNaN(remoteUid) && myUid < remoteUid) {
-                    console.log(`My UID (${myUid}) < Remote UID (${remoteUid}). Initiating recording...`);
+                    console.log(`HOST initiating recording...`);
                     await startRecording();
-                } else {
-                    console.log(`My UID (${myUid}) > Remote UID (${remoteUid}). Waiting for peer to start recording.`);
                 }
             }
         }
 
         async function startRecording() {
-            if (recordingData) return; // Already recording
+            if (recordingData) return;
 
             try {
-                const recorderUid = 999999; // Fixed UID for recorder bot
+                const recorderUid = 999999;
                 const recordingResponse = await axios.post(`${config.backendUrl}/agora/start-recording`, {
                     channelName: currentChannelName,
                     uid: recorderUid
                 });
                 recordingData = recordingResponse.data;
                 console.log('Recording started:', recordingData);
-                updateRemoteInfo('🔴 Recording started', 'success');
+                updateRemoteInfo('🔴 Recording started by HOST', 'success');
             } catch (recordError) {
                 console.error('Failed to start recording:', recordError);
                 if (recordError.response && recordError.response.status !== 400) {
@@ -418,14 +576,14 @@
 
         function handleUserLeft(user) {
             delete remoteUsers[user.uid];
-            document.getElementById('remoteVideoContainer').innerHTML = '<div class="video-label">🎥 User 2 (Remote)</div><div id="remote-video"></div>';
+            document.getElementById('remoteVideoContainer').innerHTML = '<div class="video-label">🎥 Remote User</div><div class="role-badge" id="remoteRoleBadge" style="display: none;"></div><div id="remote-video"></div>';
             document.getElementById('remoteUserInfo').innerHTML = '⏳ Waiting for remote user to join...';
         }
 
         async function leaveCall() {
             try {
-                // Stop recording first
-                if (recordingData) {
+                // Only HOST can stop recording
+                if (currentUserRole === 'host' && recordingData) {
                     try {
                         const recorderUid = 999999;
                         await axios.post(`${config.backendUrl}/agora/stop-recording`, {
@@ -434,8 +592,8 @@
                             resourceId: recordingData.resourceId,
                             sid: recordingData.sid
                         });
-                        console.log('Recording stopped');
-                        updateRemoteInfo('⏹️ Recording stopped', 'success');
+                        console.log('Recording stopped by HOST');
+                        updateRemoteInfo('ℹ️ Recording stopped by HOST', 'success');
                         recordingData = null;
                     } catch (recordError) {
                         console.error('Failed to stop recording:', recordError);
@@ -454,31 +612,47 @@
                 await agoraClient.leave();
 
                 remoteUsers = {};
-                document.getElementById('localVideoContainer').innerHTML = '<div class="video-label">📱 You (User 1)</div><div id="local-video"></div>';
-                document.getElementById('remoteVideoContainer').innerHTML = '<div class="video-label">🎥 User 2 (Remote)</div><div id="remote-video"></div>';
+                document.getElementById('localVideoContainer').innerHTML = '<div class="video-label">📱 You</div><div class="role-badge" id="localRoleBadge"></div><div id="local-video"></div>';
+                document.getElementById('remoteVideoContainer').innerHTML = '<div class="video-label">🎥 Remote User</div><div class="role-badge" id="remoteRoleBadge" style="display: none;"></div><div id="remote-video"></div>';
                 document.getElementById('remoteUserInfo').innerHTML = '⏳ Waiting for remote user to join...';
 
                 isCallActive = false;
                 hasCamera = false;
-                updateUI(false);
+                updateCallUI(false);
                 updateRemoteInfo('✅ Left the call', 'success');
+                
+                // Show role selector again
+                document.getElementById('roleSelector').style.display = 'flex';
+                updateRoleUI();
             } catch (error) {
                 console.error('Failed to leave call:', error);
                 updateRemoteInfo('Failed to leave call', 'error');
             }
         }
 
-        function updateUI(isInCall) {
-            document.getElementById('joinBtn').disabled = isInCall;
-            document.getElementById('leaveBtn').disabled = !isInCall;
-            document.getElementById('micBtn').disabled = !isInCall;
-            document.getElementById('camBtn').disabled = !isInCall;
+        function updateCallUI(isInCall) {
+            const joinBtn = document.getElementById('joinBtn');
+            const leaveBtn = document.getElementById('leaveBtn');
+            const micBtn = document.getElementById('micBtn');
+            const camBtn = document.getElementById('camBtn');
+
+            joinBtn.disabled = isInCall;
+            micBtn.disabled = !isInCall;
+            camBtn.disabled = !isInCall;
+
+            // PARTICIPANT cannot leave the call - only HOST can end it
+            if (currentUserRole === 'participant') {
+                leaveBtn.classList.add('btn-hidden');
+            } else {
+                leaveBtn.classList.remove('btn-hidden');
+                leaveBtn.disabled = !isInCall;
+            }
 
             if (!isInCall) {
-                document.getElementById('micBtn').textContent = 'Mic: On';
-                document.getElementById('camBtn').textContent = 'Cam: On';
-                document.getElementById('micBtn').className = 'btn-primary';
-                document.getElementById('camBtn').className = 'btn-primary';
+                micBtn.textContent = 'Mic: On';
+                camBtn.textContent = 'Cam: On';
+                micBtn.className = 'btn-primary';
+                camBtn.className = 'btn-primary';
             }
         }
 
