@@ -350,20 +350,8 @@
                 updateUI(true);
                 updateRemoteInfo(`✅ Joined channel: ${channelName}${!hasCamera ? ' (Audio only)' : ''}`, 'success');
 
-                // Start recording
-                try {
-                    const recorderUid = 999999; // Fixed UID for recorder bot
-                    const recordingResponse = await axios.post(`${config.backendUrl}/agora/start-recording`, {
-                        channelName: channelName,
-                        uid: recorderUid
-                    });
-                    recordingData = recordingResponse.data;
-                    console.log('Recording started:', recordingData);
-                    updateRemoteInfo('🔴 Recording started', 'success');
-                } catch (recordError) {
-                    console.error('Failed to start recording:', recordError);
-                    updateRemoteInfo('⚠️ Recording failed to start', 'warning');
-                }
+                // Recording is now handled in handleUserPublished
+
             } catch (error) {
                 console.error('Failed to join call:', error);
                 updateRemoteInfo(`❌ Error: ${error.message}`, 'error');
@@ -386,6 +374,39 @@
                 remoteAudioTrack.play();
                 if (!document.getElementById('remoteUserInfo').innerHTML.includes('Video')) {
                     document.getElementById('remoteUserInfo').innerHTML = `✅ <strong>Connected!</strong> User ${user.uid} (Audio only)`;
+                }
+            }
+
+            // Check if we should start recording (Only if 2 users are present)
+            if (!recordingData && Object.keys(remoteUsers).length > 0) {
+                const myUid = parseInt(currentUserId);
+                const remoteUid = parseInt(user.uid);
+
+                if (!isNaN(myUid) && !isNaN(remoteUid) && myUid < remoteUid) {
+                    console.log(`My UID (${myUid}) < Remote UID (${remoteUid}). Initiating recording...`);
+                    await startRecording();
+                } else {
+                    console.log(`My UID (${myUid}) > Remote UID (${remoteUid}). Waiting for peer to start recording.`);
+                }
+            }
+        }
+
+        async function startRecording() {
+            if (recordingData) return; // Already recording
+
+            try {
+                const recorderUid = 999999; // Fixed UID for recorder bot
+                const recordingResponse = await axios.post(`${config.backendUrl}/agora/start-recording`, {
+                    channelName: currentChannelName,
+                    uid: recorderUid
+                });
+                recordingData = recordingResponse.data;
+                console.log('Recording started:', recordingData);
+                updateRemoteInfo('🔴 Recording started', 'success');
+            } catch (recordError) {
+                console.error('Failed to start recording:', recordError);
+                if (recordError.response && recordError.response.status !== 400) {
+                    updateRemoteInfo('⚠️ Recording failed to start', 'warning');
                 }
             }
         }
