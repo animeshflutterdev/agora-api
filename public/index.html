@@ -556,6 +556,9 @@
                 }
             }
 
+            console.log(`recordingData: ${recordingData}`);
+            console.log(`currentUserRole: ${currentUserRole}`);
+            console.log(`Object.keys(remoteUsers).length: ${Object.keys(remoteUsers).length}`);
             // Only HOST can start recording
             if (currentUserRole === 'host' && !recordingData && Object.keys(remoteUsers).length > 0) {
                 console.log(`HOST initiating recording...`);
@@ -583,6 +586,7 @@
                 }
             } finally {
                 isRecordingStarting = false;
+                console.log('isRecordingStarting:');
             }
         }
 
