@@ -163,7 +163,7 @@
             background: #f5f5f5;
         }
 
-        .role-option input:checked + label {
+        .role-option input:checked+label {
             color: #667eea;
         }
 
@@ -359,6 +359,7 @@
         let isCallActive = false;
         let hasCamera = false;
         let recordingData = null;
+        let isRecordingStarting = false;
 
         // Update UI based on role selection
         document.querySelectorAll('input[name="userRole"]').forEach(radio => {
@@ -450,6 +451,7 @@
                 // Try to create camera track (optional)
                 hasCamera = false;
                 try {
+                    // First try with ideal resolution
                     localVideoTrack = await AgoraRTC.createCameraVideoTrack({
                         encoderConfig: {
                             width: { ideal: 1280 },
@@ -459,8 +461,25 @@
                     hasCamera = true;
                     console.log('Camera created successfully');
                 } catch (videoError) {
-                    console.warn('Camera not available:', videoError.message);
-                    updateRemoteInfo('⚠️ Camera not found. Joining with audio only.', 'warning');
+                    console.warn('High-res camera failed, trying default:', videoError);
+                    try {
+                        // Fallback to default resolution
+                        localVideoTrack = await AgoraRTC.createCameraVideoTrack();
+                        hasCamera = true;
+                        console.log('Camera created with default settings');
+                    } catch (fallbackError) {
+                        console.warn('Camera not available:', fallbackError);
+                        let errorMsg = '⚠️ Camera not found.';
+
+                        // Check for common errors
+                        if (fallbackError.name === 'NotAllowedError' || fallbackError.name === 'PermissionDeniedError') {
+                            errorMsg = '⚠️ Camera permission denied. Please allow camera access.';
+                        } else if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                            errorMsg = '⚠️ Camera requires HTTPS on mobile/LAN.';
+                        }
+
+                        updateRemoteInfo(errorMsg + ' Joining with audio only.', 'warning');
+                    }
                 }
 
                 // Try to create microphone track (MANDATORY)
@@ -493,7 +512,7 @@
 
                 isCallActive = true;
                 updateCallUI(true);
-                
+
                 const roleText = currentUserRole === 'host' ? '(HOST)' : '(PARTICIPANT)';
                 updateRemoteInfo(`✅ Joined as ${roleText}: ${channelName}${!hasCamera ? ' (Audio only)' : ''}`, 'success');
 
@@ -512,7 +531,7 @@
             // Show remote user's role badge
             const remoteRoleBadge = document.getElementById('remoteRoleBadge');
             remoteRoleBadge.style.display = 'block';
-            
+
             // Determine remote user's role (in real app, this would come from server/metadata)
             // For now, we'll show them as participant if we're host, and vice versa
             if (currentUserRole === 'host') {
@@ -539,18 +558,14 @@
 
             // Only HOST can start recording
             if (currentUserRole === 'host' && !recordingData && Object.keys(remoteUsers).length > 0) {
-                const myUid = parseInt(currentUserId);
-                const remoteUid = parseInt(user.uid);
-
-                if (!isNaN(myUid) && !isNaN(remoteUid) && myUid < remoteUid) {
-                    console.log(`HOST initiating recording...`);
-                    await startRecording();
-                }
+                console.log(`HOST initiating recording...`);
+                await startRecording();
             }
         }
 
         async function startRecording() {
-            if (recordingData) return;
+            if (recordingData || isRecordingStarting) return;
+            isRecordingStarting = true;
 
             try {
                 const recorderUid = 999999;
@@ -566,6 +581,8 @@
                 if (recordError.response && recordError.response.status !== 400) {
                     updateRemoteInfo('⚠️ Recording failed to start', 'warning');
                 }
+            } finally {
+                isRecordingStarting = false;
             }
         }
 
@@ -620,7 +637,7 @@
                 hasCamera = false;
                 updateCallUI(false);
                 updateRemoteInfo('✅ Left the call', 'success');
-                
+
                 // Show role selector again
                 document.getElementById('roleSelector').style.display = 'flex';
                 updateRoleUI();
