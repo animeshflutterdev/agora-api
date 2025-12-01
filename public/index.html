@@ -572,6 +572,7 @@
 
             try {
                 const recorderUid = 999999;
+                console.log(`Mauuuuu1---> ${currentChannelName}`);
                 const recordingResponse = await axios.post(`${config.backendUrl}/agora/start-recording`, {
                     channelName: currentChannelName,
                     uid: recorderUid

@@ -41,9 +41,10 @@ const activeSessions = new Map();
 // Helper: Generate Agora Basic Auth Header
 const getAuthHeader = () => {
   const credentials = Buffer.from(`${CUSTOMER_ID}:${CUSTOMER_SECRET}`).toString('base64');
-  return { 
-    Authorization: `Basic ${credentials}`, 
-    'Content-Type': 'application/json' 
+  console.log(`getAuthHeader_credentials--> ${credentials}`);
+  return {
+    Authorization: `Basic ${credentials}`,
+    'Content-Type': 'application/json'
   };
 };
 
@@ -64,6 +65,7 @@ const formatErrorResponse = (errorCode, customMessage) => {
 exports.startRecording = async (req, res) => {
   try {
     const { channelName, uid, recordingMode = 'mix', initiatorRole = 'host' } = req.body;
+    console.log("Mauuuu");
 
     // Validation
     if (!channelName || uid === undefined) {
@@ -97,13 +99,12 @@ exports.startRecording = async (req, res) => {
     // Step 1: Acquire Resource
     const acquireResponse = await axios.post(
       `https://api.agora.io/v1/apps/${APP_ID}/cloud_recording/acquire`,
-      { 
-        cname: channelName, 
-        uid: uid.toString(), 
-        clientRequest: { 
-          resourceExpiredHour: 24,
-          scene: 0
-        } 
+      {
+        cname: channelName,
+        uid: uid.toString(),
+        clientRequest: {
+          resourceExpiredHour: 24
+        }
       },
       { headers: getAuthHeader() }
     );
@@ -175,10 +176,10 @@ exports.startRecording = async (req, res) => {
 
   } catch (error) {
     console.error('[Start Recording Error]', error.response?.data || error.message);
-    
+
     const errorCode = error.response?.data?.code || 501;
     const errorMsg = error.response?.data?.message || error.message;
-    
+
     res.status(500).json(formatErrorResponse(errorCode, errorMsg));
   }
 };
@@ -239,10 +240,10 @@ exports.stopRecording = async (req, res) => {
 
   } catch (error) {
     console.error('[Stop Recording Error]', error.response?.data || error.message);
-    
+
     const errorCode = error.response?.data?.code || 501;
     const errorMsg = error.response?.data?.message || error.message;
-    
+
     res.status(500).json(formatErrorResponse(errorCode, errorMsg));
   }
 };
@@ -281,10 +282,10 @@ exports.queryRecording = async (req, res) => {
 
   } catch (error) {
     console.error('[Query Recording Error]', error.response?.data || error.message);
-    
+
     const errorCode = error.response?.data?.code || 501;
     const errorMsg = error.response?.data?.message || error.message;
-    
+
     res.status(500).json(formatErrorResponse(errorCode, errorMsg));
   }
 };
@@ -334,10 +335,10 @@ exports.updateRecordingLayout = async (req, res) => {
 
   } catch (error) {
     console.error('[Update Layout Error]', error.response?.data || error.message);
-    
+
     const errorCode = error.response?.data?.code || 501;
     const errorMsg = error.response?.data?.message || error.message;
-    
+
     res.status(500).json(formatErrorResponse(errorCode, errorMsg));
   }
 };
