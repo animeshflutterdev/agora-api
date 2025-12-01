@@ -163,7 +163,7 @@
             background: #f5f5f5;
         }
 
-        .role-option input:checked + label {
+        .role-option input:checked+label {
             color: #667eea;
         }
 
@@ -303,8 +303,15 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
         }
 
         @media (max-width: 768px) {
@@ -380,10 +387,7 @@
 
                 <!-- User Information Form -->
                 <div class="user-info-form" id="userInfoForm">
-                    <input type="text" id="userName" placeholder="Your Name" required>
-                    <input type="email" id="userEmail" placeholder="Email Address" required>
                     <input type="text" id="channelInput" placeholder="Channel Name / Appointment ID" required>
-                    <input type="tel" id="userPhone" placeholder="Phone Number">
                 </div>
 
                 <!-- Role Notice -->
@@ -449,12 +453,12 @@
                 roleNotice.innerHTML = '<div class="doctor-notice">🩺 Doctor Mode - You can manage the consultation and recording</div>';
                 localRoleBadge.textContent = '🩺 DOCTOR';
                 localRoleBadge.className = 'role-badge doctor';
-                document.getElementById('userName').placeholder = 'Doctor Name';
+                // Remove: document.getElementById('userName').placeholder = 'Doctor Name';
             } else {
                 roleNotice.innerHTML = '<div class="patient-notice">👤 Patient Mode - Waiting for doctor to start consultation</div>';
                 localRoleBadge.textContent = '👤 PATIENT';
                 localRoleBadge.className = 'role-badge patient';
-                document.getElementById('userName').placeholder = 'Patient Name';
+                // Remove: document.getElementById('userName').placeholder = 'Patient Name';
             }
         }
 
@@ -497,24 +501,23 @@
 
         async function joinCall() {
             try {
-                userInfo.name = document.getElementById('userName').value.trim();
-                userInfo.email = document.getElementById('userEmail').value.trim();
-                userInfo.phone = document.getElementById('userPhone').value.trim();
                 const channelInput = document.getElementById('channelInput').value.trim();
 
-                if (!userInfo.name || !userInfo.email || !channelInput) {
-                    alert('Please fill in Name, Email, and Channel Name');
+                if (!channelInput) {
+                    alert('Please fill in Channel Name');
                     return;
                 }
 
-                const channelName = channelInput;
+                const channelName = 'Onion';
                 const randomUserId = Math.floor(Math.random() * 100000);
                 const userId = randomUserId.toString();
 
                 currentChannelName = channelName;
                 currentUserId = userId;
 
-                document.getElementById('localLabel').textContent = `📱 ${userInfo.name} (You)`;
+                const roleLabel = currentUserRole === 'doctor' ? 'Doctor' : 'Patient';
+
+                document.getElementById('localLabel').textContent = `📱 ${roleLabel} (You)`;
                 document.getElementById('roleSelector').style.display = 'none';
                 document.getElementById('userInfoForm').style.display = 'none';
 
@@ -569,7 +572,7 @@
 
                 isCallActive = true;
                 updateCallUI(true);
-                
+
                 const roleText = currentUserRole === 'doctor' ? 'DOCTOR' : 'PATIENT';
                 updateRemoteInfo(`✅ Joined as ${roleText}`);
 
@@ -589,7 +592,7 @@
             const remoteRoleBadge = document.getElementById('remoteRoleBadge');
             const remoteLabel = document.getElementById('remoteLabel');
             remoteRoleBadge.style.display = 'block';
-            
+
             if (currentUserRole === 'doctor') {
                 remoteRoleBadge.textContent = '👤 PATIENT';
                 remoteRoleBadge.className = 'role-badge patient';
@@ -629,7 +632,7 @@
                 });
                 recordingData = recordingResponse.data;
                 console.log('✅ Recording started:', recordingData);
-                
+
                 document.getElementById('recordingIndicator').classList.add('active');
                 updateRemoteInfo('🔴 Consultation is being recorded');
             } catch (recordError) {
@@ -646,7 +649,7 @@
         async function handleUserLeft(user) {
             delete remoteUsers[user.uid];
             document.getElementById('remoteVideoContainer').innerHTML = '<div class="video-label" id="remoteLabel">🎥 Remote User</div><div class="role-badge" id="remoteRoleBadge" style="display: none;"></div><div id="remote-video"></div>';
-            
+
             const otherRole = currentUserRole === 'doctor' ? 'Patient' : 'Doctor';
             updateRemoteInfo(`⚠️ ${otherRole} has left the consultation`);
 
@@ -699,7 +702,7 @@
                 hasCamera = false;
                 updateCallUI(false);
                 updateRemoteInfo('✅ Consultation ended');
-                
+
                 document.getElementById('roleSelector').style.display = 'flex';
                 document.getElementById('userInfoForm').style.display = 'grid';
                 updateRoleUI();
