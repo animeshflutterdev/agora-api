@@ -394,11 +394,11 @@
                     codec: 'vp8'
                 });
 
-                console.log(`Mauuuuu2---> ${handleUserPublished}`);
                 agoraClient.on('user-published', handleUserPublished);
                 agoraClient.on('user-unpublished', handleUserUnpublished);
                 agoraClient.on('user-left', handleUserLeft);
 
+                console.log(`Mauuuuu2---> ${agoraClient}`);
                 console.log('Agora client initialized');
             } catch (error) {
                 console.error('Failed to initialize Agora:', error);
