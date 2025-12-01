@@ -550,7 +550,11 @@
 
             if (mediaType === 'audio') {
                 const remoteAudioTrack = user.audioTrack;
-                remoteAudioTrack.play();
+                if (remoteAudioTrack) {
+                    remoteAudioTrack.play();
+                } else {
+                    console.warn('Audio track not available yet for user:', user.uid);
+                }
                 if (!document.getElementById('remoteUserInfo').innerHTML.includes('Video')) {
                     document.getElementById('remoteUserInfo').innerHTML = `✅ <strong>Connected!</strong> User ${user.uid} (Audio only)`;
                 }
