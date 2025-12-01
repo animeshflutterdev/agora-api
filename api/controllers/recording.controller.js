@@ -65,7 +65,7 @@ const formatErrorResponse = (errorCode, customMessage) => {
 exports.startRecording = async (req, res) => {
   try {
     const { channelName, uid, recordingMode = 'mix', initiatorRole = 'host' } = req.body;
-    console.log("Mauuuu");
+    console.log(`Onion--- ${JSON.stringify(req.body)}`);
 
     // Validation
     if (!channelName || uid === undefined) {
@@ -87,6 +87,7 @@ exports.startRecording = async (req, res) => {
 
     // Check if recording already exists for this channel
     if (activeSessions.has(channelName)) {
+      console.log("Onion1");
       return res.status(400).json({
         success: false,
         message: "Recording already in progress for this channel",
@@ -124,30 +125,36 @@ exports.startRecording = async (req, res) => {
       privilegeExpiredTs
     );
 
+    let url = `https://api.agora.io/v1/apps/${APP_ID}/cloud_recording/resourceid/${resourceId}/mode/${recordingMode}/start`;
+    console.log(`[Start Recording] URL: ${url}`);
+
+    let data = {
+      cname: channelName,
+      uid: uid.toString(),
+      clientRequest: {
+        token: recorderToken,
+        recordingConfig: {
+          channelType: 0,
+          streamTypes: 2,
+          maxIdleTime: 30,
+          transcodingConfig: {
+            height: 640,
+            width: 360,
+            bitrate: 500,
+            fps: 15,
+            mixedVideoLayout: 1,
+            backgroundColor: "#000000"
+          }
+        },
+        storageConfig: STORAGE_CONFIG
+      }
+    };
+    console.log(`[Start Recording] Data: ${JSON.stringify(data)}`);
+
     // Step 3: Start Recording
     const startResponse = await axios.post(
-      `https://api.agora.io/v1/apps/${APP_ID}/cloud_recording/resourceid/${resourceId}/mode/${recordingMode}/start`,
-      {
-        cname: channelName,
-        uid: uid.toString(),
-        clientRequest: {
-          token: recorderToken,
-          recordingConfig: {
-            channelType: 0,
-            streamTypes: 2,
-            maxIdleTime: 30,
-            transcodingConfig: {
-              height: 640,
-              width: 360,
-              bitrate: 500,
-              fps: 15,
-              mixedVideoLayout: 1,
-              backgroundColor: "#000000"
-            }
-          },
-          storageConfig: STORAGE_CONFIG
-        }
-      },
+      url,
+      data,
       { headers: getAuthHeader() }
     );
 

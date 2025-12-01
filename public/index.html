@@ -398,7 +398,6 @@
                 agoraClient.on('user-unpublished', handleUserUnpublished);
                 agoraClient.on('user-left', handleUserLeft);
 
-                console.log(`Mauuuuu2---> ${agoraClient}`);
                 console.log('Agora client initialized');
             } catch (error) {
                 console.error('Failed to initialize Agora:', error);
@@ -573,7 +572,7 @@
 
             try {
                 const recorderUid = 999999;
-                console.log(`Mauuuuu1---> ${currentChannelName}`);
+                console.log(`Going for call API.... /start-recording`);
                 const recordingResponse = await axios.post(`${config.backendUrl}/agora/start-recording`, {
                     channelName: currentChannelName,
                     uid: recorderUid
