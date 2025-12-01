@@ -24,8 +24,8 @@ router.post('/create_room', nocache, createRoomController.createRoom);
 // Recording routes (HOST only operations)
 router.post('/start-recording', recordingController.startRecording);
 router.post('/stop-recording', recordingController.stopRecording);
-router.post('/query-recording', recordingController.queryRecording);
-router.post('/update-recording-layout', recordingController.updateRecordingLayout);
-router.get('/active-sessions', recordingController.getActiveSessions);
+// router.post('/query-recording', recordingController.queryRecording);
+// router.post('/update-recording-layout', recordingController.updateRecordingLayout);
+// router.get('/active-sessions', recordingController.getActiveSessions);
 
 module.exports = router;
