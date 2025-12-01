@@ -29,6 +29,10 @@ app.get('/videoCall', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+app.get('/noposter', (req, res) => {
+  res.send('No Poster');
+});
+
 app.use('/agora', require('./api/routes/agora.routes'));
 
 // 404 handler - MUST be after all routes
