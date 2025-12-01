@@ -68,10 +68,12 @@ exports.startRecording = async (req, res) => {
     console.log(`Onion--- ${JSON.stringify(req.body)}`);
 
     // Validation
+    console.log("Onion99");
     if (!channelName || uid === undefined) {
       return res.status(400).json(formatErrorResponse(2, "Missing channelName or uid"));
     }
 
+    console.log("Onion98");
     // Only HOST can start recording
     if (initiatorRole !== 'host') {
       return res.status(403).json({
@@ -81,11 +83,13 @@ exports.startRecording = async (req, res) => {
       });
     }
 
+    console.log("Onion97");
     if (!APP_ID || !APP_CERTIFICATE || !CUSTOMER_ID || !CUSTOMER_SECRET) {
       return res.status(500).json(formatErrorResponse(2, "Missing Agora credentials in environment"));
     }
 
-    // Check if recording already exists for this channel
+    console.log("Onion96");
+    // Check if recording a lready exists for this channel
     if (activeSessions.has(channelName)) {
       console.log("Onion1");
       return res.status(400).json({
@@ -98,6 +102,7 @@ exports.startRecording = async (req, res) => {
     console.log(`[Recording Start] Channel: ${channelName}, UID: ${uid}, Mode: ${recordingMode}, Role: ${initiatorRole}`);
 
     // Step 1: Acquire Resource
+    console.log("Onion95");
     const acquireResponse = await axios.post(
       `https://api.agora.io/v1/apps/${APP_ID}/cloud_recording/acquire`,
       {
