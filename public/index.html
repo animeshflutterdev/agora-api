@@ -628,7 +628,7 @@
             if (recordingData) return;
 
             try {
-                const recorderUid = 999999;
+                const recorderUid = 999990;
                 const recordingResponse = await axios.post(`${config.backendUrl}/agora/start-recording`, {
                     channelName: currentChannelName,
                     uid: recorderUid,

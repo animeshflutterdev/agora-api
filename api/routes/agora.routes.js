@@ -28,4 +28,8 @@ router.post('/stop-recording', nocache, recordingController.stopRecording);
 // router.post('/update-recording-layout', recordingController.updateRecordingLayout);
 // router.get('/active-sessions', recordingController.getActiveSessions);
 
+// Upload handling
+router.post('/upload', recordingController.uploadMiddleware, recordingController.handleUpload);
+router.get('/recording/:sid', recordingController.getRecordingFiles);
+
 module.exports = router;
