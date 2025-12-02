@@ -96,7 +96,12 @@ exports.startRecording = async (req, res) => {
       }
     };
 
+    console.log(`url-data: ---${url} ||| ${data}`);
+
     const startResponse = await axios.post(url, data, { headers: getAuthHeader() });
+
+    console.log(`startResponse_startRecording: ---${startResponse}`);
+
     const sid = startResponse.data.sid;
 
     activeSessions.set(channelName, { resourceId, sid, channelName, uid, initiatorRole, startedAt: new Date().toISOString() });
@@ -129,13 +134,15 @@ exports.stopRecording = async (req, res) => {
       { headers: getAuthHeader() }
     );
 
+    console.log(`stopResponse_stopRecording: ---${stopResponse}`);
+    console.log(`stopResponse.data.serverResponse?.uploadingStatus: ---${stopResponse.data.serverResponse?.uploadingStatus}`);
+
     // Remove from active sessions
     if (channelName) activeSessions.delete(channelName);
 
     // Check if uploadStore already has the files for this sid
     const uploadedFiles = uploadsStore.getFilesBySid(sid);
     if (uploadedFiles && uploadedFiles.length > 0) {
-      console.log(`[Recording Stopped] files already available for sid=${sid}`);
       return res.status(200).json({
         success: true,
         resourceId,

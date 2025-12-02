@@ -19,11 +19,11 @@ const nocache = (_, resp, next) => {
 }
 
 // Route to create an Agora room
-router.post('/create_room', nocache, createRoomController.createRoom);
+router.post('/token_genarate', nocache, createRoomController.tokenGenarate);
 
-// Recording routes (HOST only operations)
-router.post('/start-recording', recordingController.startRecording);
-router.post('/stop-recording', recordingController.stopRecording);
+// Recording routes (HOST only operations)  
+router.post('/start-recording', nocache, recordingController.startRecording);
+router.post('/stop-recording', nocache, recordingController.stopRecording);
 // router.post('/query-recording', recordingController.queryRecording);
 // router.post('/update-recording-layout', recordingController.updateRecordingLayout);
 // router.get('/active-sessions', recordingController.getActiveSessions);

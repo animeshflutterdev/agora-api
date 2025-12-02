@@ -385,11 +385,6 @@
                     </div>
                 </div>
 
-                <!-- User Information Form -->
-                <div class="user-info-form" id="userInfoForm">
-                    <input type="text" id="channelInput" placeholder="Channel Name / Appointment ID" required>
-                </div>
-
                 <!-- Role Notice -->
                 <div id="roleNotice"></div>
 
@@ -485,13 +480,14 @@
 
         async function getToken(channelName, uid) {
             try {
-                const response = await axios.post(`${config.backendUrl}/agora/create_room`, {
+                const response = await axios.post(`${config.backendUrl}/agora/token_genarate`, {
                     channelName,
                     uid,
                     role: 'publisher'
                 });
                 console.log('✅ Token received');
                 config.appId = response.data.data.appId;
+                console.log(`AppID: ${config}`);
                 return response.data.data.rtcToken;
             } catch (error) {
                 console.error('❌ Failed to get token:', error);
@@ -501,14 +497,9 @@
 
         async function joinCall() {
             try {
-                const channelInput = document.getElementById('channelInput').value.trim();
+                console.log("Joining call...");
+                const channelName = 'sample-video-call';
 
-                if (!channelInput) {
-                    alert('Please fill in Channel Name');
-                    return;
-                }
-
-                const channelName = 'Onion';
                 const randomUserId = Math.floor(Math.random() * 100000);
                 const userId = randomUserId.toString();
 
@@ -519,13 +510,14 @@
 
                 document.getElementById('localLabel').textContent = `📱 ${roleLabel} (You)`;
                 document.getElementById('roleSelector').style.display = 'none';
-                document.getElementById('userInfoForm').style.display = 'none';
 
                 if (!agoraClient) {
                     await initializeAgora();
                 }
 
+                console.log('Onion token genarating');
                 const token = await getToken(channelName, randomUserId);
+                console.log(`Onion token genarated: ${token}`);
 
                 // Create camera track
                 hasCamera = false;
@@ -553,6 +545,7 @@
                 }
 
                 // Display local video
+                console.log('Onion1');
                 if (hasCamera) {
                     await localVideoTrack.play('local-video');
                 } else {
@@ -561,18 +554,22 @@
                 }
 
                 // Join channel
+                console.log('Onion2');
                 await agoraClient.join(config.appId, channelName, token, randomUserId);
 
+                console.log('Onion3');
                 const tracksToPublish = [localAudioTrack];
                 if (hasCamera) {
                     tracksToPublish.push(localVideoTrack);
                 }
 
+                console.log('Onion4');
                 await agoraClient.publish(tracksToPublish);
 
                 isCallActive = true;
                 updateCallUI(true);
 
+                console.log('Onion5');
                 const roleText = currentUserRole === 'doctor' ? 'DOCTOR' : 'PATIENT';
                 updateRemoteInfo(`✅ Joined as ${roleText}`);
 
@@ -581,20 +578,26 @@
                 updateRemoteInfo(`❌ Error: ${error.message}`);
                 updateCallUI(false);
                 document.getElementById('roleSelector').style.display = 'flex';
-                document.getElementById('userInfoForm').style.display = 'grid';
             }
         }
 
         async function handleUserPublished(user, mediaType) {
+            console.log(`✅ RemoteUsers__ONION ${remoteUsers}`);
             await agoraClient.subscribe(user, mediaType);
             remoteUsers[user.uid] = user;
+            console.log(`✅ RemoteUsers ${remoteUsers}`);
+            
+            console.log(`✅ Media Type ${mediaType}`);
 
             const remoteRoleBadge = document.getElementById('remoteRoleBadge');
             const remoteLabel = document.getElementById('remoteLabel');
             remoteRoleBadge.style.display = 'block';
 
+            console.log(`✅ RemoteRoleBadge ${remoteRoleBadge}`);
+            console.log(`✅ RemoteLabel ${remoteLabel}`);
+
             if (currentUserRole === 'doctor') {
-                remoteRoleBadge.textContent = '👤 PATIENT';
+                remoteRoleBadge.textContent = '👤 PATIENT'; 
                 remoteRoleBadge.className = 'role-badge patient';
                 remoteLabel.textContent = '🎥 Patient';
             } else {
@@ -704,7 +707,6 @@
                 updateRemoteInfo('✅ Consultation ended');
 
                 document.getElementById('roleSelector').style.display = 'flex';
-                document.getElementById('userInfoForm').style.display = 'grid';
                 updateRoleUI();
             } catch (error) {
                 console.error('❌ Failed to leave call:', error);

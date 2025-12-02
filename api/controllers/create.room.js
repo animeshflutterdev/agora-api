@@ -7,7 +7,7 @@ const { RtcTokenBuilder, RtcRole } = require("agora-token");
  * @param {string} uid - User ID
  * @param {string} role - User role (publisher/subscriber)
  */
-exports.createRoom = async (req, res, next) => {
+exports.tokenGenarate = async (req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
 
   try {
@@ -34,8 +34,8 @@ exports.createRoom = async (req, res, next) => {
     }
 
     // Determine RTC role
-    const rtcRole = role.toLowerCase() === "subscriber" 
-      ? RtcRole.SUBSCRIBER 
+    const rtcRole = role.toLowerCase() === "subscriber"
+      ? RtcRole.SUBSCRIBER
       : RtcRole.PUBLISHER;
 
     // Token expiration (1 hour)
