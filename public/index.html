@@ -412,7 +412,7 @@
         const Live = true;
 
         const config = {
-            backendUrl: Live ? 'https://agora-api-qthb.onrender.com' : 'http://127.0.0.1:3000',
+            backendUrl: Live ? 'https://stage-serv-catalog.sastasundar.com/customer' : 'http://127.0.0.1:3000',
             appId: null
         };
 
@@ -480,7 +480,7 @@
 
         async function getToken(channelName, uid) {
             try {
-                const response = await axios.post(`${config.backendUrl}/agora/token_genarate`, {
+                const response = await axios.post(`${config.backendUrl}/token_genarate`, {
                     channelName,
                     uid,
                     role: 'publisher'
@@ -628,8 +628,8 @@
             if (recordingData) return;
 
             try {
-                const recorderUid = 999990;
-                const recordingResponse = await axios.post(`${config.backendUrl}/agora/start-recording`, {
+                const recorderUid = parseInt(currentUserId);
+                const recordingResponse = await axios.post(`${config.backendUrl}/start-recording`, {
                     channelName: currentChannelName,
                     uid: recorderUid,
                     initiatorRole: 'host'
@@ -671,8 +671,8 @@
                 // Only DOCTOR can stop recording
                 if (currentUserRole === 'doctor' && recordingData) {
                     try {
-                        const recorderUid = 999999;
-                        await axios.post(`${config.backendUrl}/agora/stop-recording`, {
+                        const recorderUid = parseInt(currentUserId);
+                        await axios.post(`${config.backendUrl}/stop-recording`, {
                             channelName: currentChannelName,
                             uid: recorderUid,
                             resourceId: recordingData.resourceId,
