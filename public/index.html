@@ -586,7 +586,7 @@
             await agoraClient.subscribe(user, mediaType);
             remoteUsers[user.uid] = user;
             console.log(`✅ RemoteUsers ${remoteUsers}`);
-            
+
             console.log(`✅ Media Type ${mediaType}`);
 
             const remoteRoleBadge = document.getElementById('remoteRoleBadge');
@@ -597,7 +597,7 @@
             console.log(`✅ RemoteLabel ${remoteLabel}`);
 
             if (currentUserRole === 'doctor') {
-                remoteRoleBadge.textContent = '👤 PATIENT'; 
+                remoteRoleBadge.textContent = '👤 PATIENT';
                 remoteRoleBadge.className = 'role-badge patient';
                 remoteLabel.textContent = '🎥 Patient';
             } else {
@@ -631,7 +631,8 @@
                 const recorderUid = 999999;
                 const recordingResponse = await axios.post(`${config.backendUrl}/agora/start-recording`, {
                     channelName: currentChannelName,
-                    uid: recorderUid
+                    uid: recorderUid,
+                    initiatorRole: 'host'
                 });
                 recordingData = recordingResponse.data;
                 console.log('✅ Recording started:', recordingData);
