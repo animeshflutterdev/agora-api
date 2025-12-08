@@ -2,6 +2,9 @@ require("dotenv").config();
 const axios = require('axios');
 const { RtcTokenBuilder, RtcRole } = require("agora-token");
 const uploadsStore = require('./uploadsStore'); // adjust path if needed
+const multer = require("multer");
+const fs = require("fs-extra");
+const path = require('path');
 
 const APP_ID = process.env.AGORA_APP_ID;
 const APP_CERTIFICATE = process.env.AGORA_APP_CERTIFICATE;
@@ -10,12 +13,12 @@ const CUSTOMER_SECRET = process.env.AGORA_CUSTOMER_SECRET;
 const SERVER_PUBLIC_URL = process.env.SERVER_PUBLIC_URL || `${process.env.HOST_NAME}:${process.env.PORT}`;
 console.log(`SERVER_PUBLIC_URL---> ${SERVER_PUBLIC_URL}`);
 
-const ERROR_CODES = { /* same as before */ 2: "Invalid parameter", 7: "Recording already running", 8: "HTTP request header error", 49: "Repeated stop request", 53: "Recording already running (different resource)", 62: "Cloud recording not enabled", 65: "Network jitter - retry recommended", 109: "Token expired", 110: "Token invalid", 432: "Parameter mismatch", 433: "Resource ID expired", 435: "No recorded files created", 501: "Recording service exiting", 1001: "Failed to parse resource ID", 1003: "App ID or recording ID mismatch", 1013: "Invalid channel name" };
+const ERROR_CODES = { 2: "Invalid parameter", 7: "Recording already running", 8: "HTTP request header error", 49: "Repeated stop request", 53: "Recording already running (different resource)", 62: "Cloud recording not enabled", 65: "Network jitter - retry recommended", 109: "Token expired", 110: "Token invalid", 432: "Parameter mismatch", 433: "Resource ID expired", 435: "No recorded files created", 501: "Recording service exiting", 1001: "Failed to parse resource ID", 1003: "App ID or recording ID mismatch", 1013: "Invalid channel name" };
 
 const LOCAL_STORAGE_CONFIG = {
   vendor: 6,          // 6 = CUSTOM HTTPS SERVER
   region: 1,
-  bucket: `${SERVER_PUBLIC_URL}/agora/upload`, // Agora will POST here
+  bucket: `${SERVER_PUBLIC_URL}/upload`, // Agora will POST here
   accessKey: "none",
   secretKey: "none",
   fileNamePrefix: ["records"]
@@ -40,6 +43,26 @@ const formatErrorResponse = (errorCode, customMessage) => {
     timestamp: new Date().toISOString()
   };
 };
+
+// Storage location for uploaded recording files
+// Using process.cwd() to ensure we target the project root 'uploads/agora' folder
+const uploadFolder = path.join(process.cwd(), "uploads/");
+fs.ensureDirSync(uploadFolder);
+
+// Multer config for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadFolder);
+  },
+  filename: (req, file, cb) => {
+    const timestamp = new Date().toISOString().replace(/T/, '_').replace(/\..+/, '').replace(/:/g, '-');
+    cb(null, `${timestamp}_${Date.now()}_${file.originalname}`);
+  }
+});
+const upload = multer({ storage });
+
+// Export middleware for use in routes
+exports.uploadMiddleware = upload.array("file");
 
 exports.startRecording = async (req, res) => {
   try {
@@ -156,7 +179,7 @@ exports.stopRecording = async (req, res) => {
     }
 
     // If files are not yet available, respond with stop info and a poll endpoint
-    const pollEndpoint = `${SERVER_PUBLIC_URL}/agora/recording/${sid}`;
+    const pollEndpoint = `${SERVER_PUBLIC_URL}/upload/${sid}`;
     console.log(`[Recording Stopped] files not yet in store for sid=${sid}. poll at ${pollEndpoint}`);
 
     res.status(200).json({
@@ -179,32 +202,6 @@ exports.stopRecording = async (req, res) => {
   }
 };
 
-// ===================================================
-//   UPLOAD HANDLING (Moved from app.js)
-// ===================================================
-const multer = require("multer");
-const fs = require("fs-extra");
-const path = require('path');
-
-// Storage location for uploaded recording files
-// Using process.cwd() to ensure we target the project root 'uploads/agora' folder
-const uploadFolder = path.join(process.cwd(), "uploads/agora");
-fs.ensureDirSync(uploadFolder);
-
-// Multer config for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadFolder);
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + "_" + file.originalname);
-  }
-});
-const upload = multer({ storage });
-
-// Export middleware for use in routes
-exports.uploadMiddleware = upload.array("file");
-
 exports.handleUpload = async (req, res) => {
   try {
     console.log("🔔 AGORA CALLBACK RECEIVED");
@@ -224,7 +221,7 @@ exports.handleUpload = async (req, res) => {
     if (req.files && req.files.length > 0) {
       console.log("📁 Uploaded Files:");
       req.files.forEach(file => {
-        const publicUrl = `${SERVER_PUBLIC_URL}/uploads/agora/${file.filename}`;
+        const publicUrl = `${SERVER_PUBLIC_URL}/uploads/${file.filename}`;
         console.log(file.path, '->', publicUrl);
         savedFiles.push({
           fileName: file.originalname,
@@ -248,7 +245,8 @@ exports.handleUpload = async (req, res) => {
         for (const f of fileList) {
           const fileUrl = f.url || f.fileUrl || f.file_url;
           if (!fileUrl) continue;
-          const outName = `${Date.now()}_${path.basename(fileUrl.split('?')[0])}`;
+          const timestamp = new Date().toISOString().replace(/T/, '_').replace(/\..+/, '').replace(/:/g, '-');
+          const outName = `${timestamp}_${Date.now()}_${path.basename(fileUrl.split('?')[0])}`;
           const outPath = path.join(uploadFolder, outName);
           const writer = fs.createWriteStream(outPath);
           console.log('Downloading', fileUrl, '->', outPath);

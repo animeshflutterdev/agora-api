@@ -3,16 +3,19 @@ const express = require('express');
 const cors = require("cors");
 const path = require('path');
 const fs = require("fs-extra");
+const crypto = require( 'crypto' );
 
 const app = express();
 
 const hostname = process.env.HOST_NAME || '0.0.0.0';
 const port = process.env.PORT || 4000;
 const SERVER_PUBLIC_URL = process.env.SERVER_PUBLIC_URL || `http://${hostname}:${port}`;
+const API_SECRET = 'secret';
 
 // Middleware
 app.use(cors());
-app.use(express.json({ limit: "50mb" }));
+// app.use(express.json({ limit: "50mb" }));
+app.use( express.json( { limit: "50mb", verify: ( req, res, buffer ) => { req.rawBody = buffer; } } ) );
 app.use(express.urlencoded({ extended: true }));
 
 // Request logging for debugging
@@ -43,6 +46,31 @@ fs.ensureDirSync(uploadFolder);
 
 // Serve uploaded files statically so the returned URLs are reachable
 app.use('/uploads/agora', express.static(uploadFolder));
+
+app.get( '/webhook', ( req, res ) => {
+	const signature = _generateSignature( req.method, req.url, req.headers[ 'x-cs-timestamp' ], req.rawBody );
+  console.log('Generated Signature:', signature);
+  console.log('Received Signature:', req.headers[ 'x-cs-signature' ] );
+
+	if ( signature !== req.headers[ 'x-cs-signature' ] ) {
+		return res.sendStatus( 401 );
+	}
+
+	console.log( 'received webhook', req.body );
+	res.sendStatus( 200 );
+} );
+
+function _generateSignature( method, url, timestamp, body ) {
+	const hmac = crypto.createHmac( 'SHA256', API_SECRET );
+
+	hmac.update( `${ method.toUpperCase() }${ url }${ timestamp }` );
+
+	if ( body ) {
+		hmac.update( body );
+	}
+
+	return hmac.digest( 'hex' );
+}
 
 // --------------------------------------------------------------------------------------
 // Error handling middleware - MUST be last
