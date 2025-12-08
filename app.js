@@ -47,7 +47,7 @@ fs.ensureDirSync(uploadFolder);
 // Serve uploaded files statically so the returned URLs are reachable
 app.use('/uploads/agora', express.static(uploadFolder));
 
-app.get( '/webhook', ( req, res ) => {
+app.post( '/webhook', ( req, res ) => {
 	const signature = _generateSignature( req.method, req.url, req.headers[ 'x-cs-timestamp' ], req.rawBody );
   console.log('Generated Signature:', signature);
   console.log('Received Signature:', req.headers[ 'x-cs-signature' ] );
