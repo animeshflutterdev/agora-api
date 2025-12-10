@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const createRoomController = require("../controllers/create.room");
 const recordingController = require("../controllers/recording.controller");
+const chatController = require("../controllers/agora.chat");
 require("dotenv").config();
 
 /*
@@ -31,5 +32,12 @@ router.post('/stop-recording', nocache, recordingController.stopRecording);
 // Upload handling
 router.post('/upload', recordingController.uploadMiddleware, recordingController.handleUpload);
 router.get('/recording/:sid', recordingController.getRecordingFiles);
+
+// Chatting routes
+router.get('/chat/app-token', chatController.getChatAppToken);
+router.post('/chat', chatController.chat);
+router.post('/chat/register', chatController.registerUser);
+router.post('/chat/user-token', chatController.getUserToken);
+router.get('/chat/status', chatController.getChatStatus);
 
 module.exports = router;

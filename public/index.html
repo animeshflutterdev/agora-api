@@ -339,6 +339,63 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Container to center/align the button */
+        .button-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        /* Main Button Styling */
+        .chat-primary {
+            /* Text & Sizing */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: white;
+            padding: 10px 24px;
+
+            /* Shape */
+            border: none;
+            border-radius: 50px;
+            /* Pill shape */
+
+            /* Default Color (Enabled) */
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            /* Indigo gradient */
+            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3);
+
+            /* Animation */
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Hover State (Only when enabled) */
+        .chat-primary:not(:disabled):hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 8px -1px rgba(79, 70, 229, 0.4);
+            filter: brightness(110%);
+        }
+
+        /* Active/Click State */
+        .chat-primary:not(:disabled):active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px -1px rgba(79, 70, 229, 0.3);
+        }
+
+        /* DISABLED STATE - The "Chat: Off" look */
+        .chat-primary:disabled {
+            background: #e2e8f0;
+            /* Light gray background */
+            color: #94a3b8;
+            /* Muted text color */
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+            border: 1px solid #cbd5e1;
+        }
     </style>
 </head>
 
@@ -399,13 +456,21 @@
                     <button class="btn-primary" id="micBtn" onclick="toggleMic()" disabled>🎤 Mic: On</button>
                     <button class="btn-primary" id="camBtn" onclick="toggleCam()" disabled>📹 Cam: On</button>
                 </div>
+            </div>
 
-                <!-- Remote User Info -->
-                <div class="remote-info" id="remoteUserInfo">
-                    ⏳ Waiting for the other person to join...
-                </div>
+            <!-- Chat Controls -->
+            <div class="button-group" style="margin-top: 10px;">
+                <input type="text" id="chatMessageInput" placeholder="Type a message..."
+                    style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ddd;">
+                <button class="btn-primary" onclick="sendQuickMessage()">Send Message</button>
+            </div>
+
+            <!-- Remote User Info -->
+            <div class="remote-info" id="remoteUserInfo">
+                ⏳ Waiting for the other person to join...
             </div>
         </div>
+    </div>
     </div>
 
     <script>
@@ -757,6 +822,44 @@
                 const camBtn = document.getElementById('camBtn');
                 camBtn.textContent = isMuted ? '📹 Cam: On' : '📹 Cam: Off';
                 camBtn.className = isMuted ? 'btn-primary' : 'btn-danger';
+            }
+        }
+
+        function toggleChat() {
+            const chatBtn = document.getElementById('chatBtn');
+            const isEnabled = chatBtn.textContent.includes('Off');
+
+            if (isEnabled) {
+                // Enable chat
+                chatBtn.textContent = '💬 Chat: On';
+                chatBtn.disabled = false;
+                // Show chat input
+                document.getElementById('chatInput').style.display = 'block';
+            } else {
+                // Disable chat
+                chatBtn.textContent = '💬 Chat: Off';
+                // Hide chat input
+                document.getElementById('chatInput').style.display = 'none';
+            }
+        }
+
+        async function sendQuickMessage() {
+            const input = document.getElementById('chatMessageInput');
+            const message = input.value.trim();
+
+            if (!message || !Object.keys(remoteUsers).length) {
+                alert('Please enter a message and ensure someone is in the call');
+                return;
+            }
+
+            const remoteUserId = Object.keys(remoteUsers)[0];
+
+            try {
+                await sendChatMessage(remoteUserId, message);
+                input.value = '';
+                alert('Message sent!');
+            } catch (error) {
+                alert('Failed to send message');
             }
         }
 

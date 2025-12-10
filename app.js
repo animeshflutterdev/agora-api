@@ -9,7 +9,7 @@ const app = express();
 
 const hostname = process.env.HOST_NAME || '0.0.0.0';
 const port = process.env.PORT || 4000;
-const SERVER_PUBLIC_URL = process.env.SERVER_PUBLIC_URL || `http://${hostname}:${port}`;
+const SERVER_PUBLIC_URL = `http://${hostname}:${port}`;
 const API_SECRET = 'secret';
 
 // Middleware

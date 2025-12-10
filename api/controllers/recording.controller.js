@@ -29,6 +29,7 @@ const activeSessions = new Map();
 
 const getAuthHeader = () => {
   const credentials = Buffer.from(`${CUSTOMER_ID}:${CUSTOMER_SECRET}`).toString('base64');
+  console.log(`Credentials-->: ${credentials}`);
   return {
     Authorization: `Basic ${credentials}`,
     'Content-Type': 'application/json'
