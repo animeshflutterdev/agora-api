@@ -7,6 +7,7 @@
     <title>Telemedicine - Doctor-Patient Consultation</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.0/axios.min.js"></script>
     <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
+    <script src="https://download.agora.io/sdk/release/agora-chat-sdk-4.6.0.js"></script>
     <style>
         * {
             margin: 0;
@@ -396,6 +397,83 @@
             transform: none;
             border: 1px solid #cbd5e1;
         }
+
+        /* Chat modal */
+        .chat-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 2000;
+        }
+
+        .chat-modal {
+            width: min(420px, 95vw);
+            max-height: 80vh;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .chat-modal-close {
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .chat-modal-body {
+            padding: 14px 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chat-message {
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+        }
+
+        .chat-message .meta {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .chat-modal-footer {
+            padding: 12px 16px;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-modal-footer input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
     </style>
 </head>
 
@@ -461,8 +539,25 @@
             <!-- Chat Controls -->
             <div class="button-group" style="margin-top: 10px;">
                 <input type="text" id="chatMessageInput" placeholder="Type a message..."
-                    style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ddd;">
-                <button class="btn-primary" onclick="sendQuickMessage()">Send Message</button>
+                    style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ddd;" disabled>
+                <button class="btn-primary" id="chatSendBtn" onclick="sendQuickMessage()" disabled>Send Message</button>
+            </div>
+
+            <!-- Chat Modal -->
+            <div class="chat-modal-overlay" id="chatModal">
+                <div class="chat-modal">
+                    <div class="chat-modal-header">
+                        <span>Consultation Chat</span>
+                        <button class="chat-modal-close" onclick="closeChatModal()">✕</button>
+                    </div>
+                    <div class="chat-modal-body" id="chatMessagesList">
+                        <!-- Messages will be appended here -->
+                    </div>
+                    <div class="chat-modal-footer">
+                        <input type="text" id="chatModalInput" placeholder="Type a message...">
+                        <button class="btn-primary" onclick="sendMessageFromModal()">Send</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Remote User Info -->
@@ -496,6 +591,8 @@
             email: '',
             phone: ''
         };
+        let isChatEnabled = false;
+        let chatMessages = [];
 
         // Update UI based on role selection
         document.querySelectorAll('input[name="userRole"]').forEach(radio => {
@@ -524,6 +621,7 @@
 
         // Initialize role UI
         updateRoleUI();
+        updateChatUI(false);
 
         async function initializeAgora() {
             try {
@@ -633,6 +731,7 @@
 
                 isCallActive = true;
                 updateCallUI(true);
+                updateChatUI(false);
 
                 console.log('Onion5');
                 const roleText = currentUserRole === 'doctor' ? 'DOCTOR' : 'PATIENT';
@@ -682,6 +781,8 @@
                 remoteAudioTrack.play();
             }
 
+            updateChatUI(true);
+
             // Only DOCTOR can start recording
             if (currentUserRole === 'doctor' && !recordingData && Object.keys(remoteUsers).length > 0) {
                 console.log('🩺 Doctor initiating recording...');
@@ -713,6 +814,7 @@
         async function handleUserUnpublished(user) {
             delete remoteUsers[user.uid];
             updateRemoteInfo('⏳ Remote user unpublished...');
+            updateChatUI(false);
         }
 
         async function handleUserLeft(user) {
@@ -721,6 +823,8 @@
 
             const otherRole = currentUserRole === 'doctor' ? 'Patient' : 'Doctor';
             updateRemoteInfo(`⚠️ ${otherRole} has left the consultation`);
+
+            updateChatUI(false);
 
             // If doctor left, patient should be notified
             if (currentUserRole === 'patient') {
@@ -771,6 +875,7 @@
                 hasCamera = false;
                 updateCallUI(false);
                 updateRemoteInfo('✅ Consultation ended');
+                updateChatUI(false);
 
                 document.getElementById('roleSelector').style.display = 'flex';
                 updateRoleUI();
@@ -802,7 +907,38 @@
                 camBtn.textContent = '📹 Cam: On';
                 micBtn.className = 'btn-primary';
                 camBtn.className = 'btn-primary';
+                updateChatUI(false);
             }
+        }
+
+        function updateChatUI(enable) {
+            const chatInput = document.getElementById('chatMessageInput');
+            const chatSendBtn = document.getElementById('chatSendBtn');
+
+            isChatEnabled = enable && isCallActive && Object.keys(remoteUsers).length > 0;
+
+            chatInput.disabled = !isChatEnabled;
+            chatSendBtn.disabled = !isChatEnabled;
+            document.getElementById('chatModalInput').disabled = !isChatEnabled;
+        }
+
+        function openChatModal() {
+            const modal = document.getElementById('chatModal');
+            modal.style.display = 'flex';
+        }
+
+        function closeChatModal() {
+            const modal = document.getElementById('chatModal');
+            modal.style.display = 'none';
+        }
+
+        function addChatMessage(sender, message) {
+            const list = document.getElementById('chatMessagesList');
+            const wrapper = document.createElement('div');
+            wrapper.className = 'chat-message';
+            wrapper.innerHTML = `<div class="meta">${sender}</div><div>${message}</div>`;
+            list.appendChild(wrapper);
+            list.scrollTop = list.scrollHeight;
         }
 
         async function toggleMic() {
@@ -857,7 +993,26 @@
             try {
                 await sendChatMessage(remoteUserId, message);
                 input.value = '';
-                alert('Message sent!');
+                addChatMessage('You', message);
+                openChatModal();
+                document.getElementById('chatModalInput').value = '';
+            } catch (error) {
+                alert('Failed to send message');
+            }
+        }
+
+        async function sendMessageFromModal() {
+            const modalInput = document.getElementById('chatModalInput');
+            const message = modalInput.value.trim();
+
+            if (!message) return;
+
+            const remoteUserId = Object.keys(remoteUsers)[0];
+
+            try {
+                await sendChatMessage(remoteUserId, message);
+                modalInput.value = '';
+                addChatMessage('You', message);
             } catch (error) {
                 alert('Failed to send message');
             }
