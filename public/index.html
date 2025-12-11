@@ -1038,7 +1038,9 @@
                     const response = await chatClient.sendTextMessage({
                         chatType: 'singleChat',
                         to: toUserId.toString(),
-                        msg: message
+                        msg: message,
+                        type: 'txt', // explicit per Agora Chat web API
+                        deliverOnlineOnly: true // align with requirement to target online user
                     });
                     console.log("Chat message sent via Agora Chat SDK:", response);
                     return response;
@@ -1086,10 +1088,13 @@
 
             if (!chatClient) {
                 chatClient = new AgoraChat.Client({ appKey: config.chatAppKey });
-                chatClient.addEventHandler('consultation-chat', {
-                    onTextMessage: handleIncomingChatMessage
-                });
+            } else {
+                chatClient.removeEventHandler('consultation-chat');
             }
+
+            chatClient.addEventHandler('consultation-chat', {
+                onTextMessage: handleIncomingChatMessage
+            });
 
             if (chatLoggedIn) return;
 
