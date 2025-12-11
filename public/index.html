@@ -573,8 +573,11 @@
 
         const config = {
             backendUrl: Live ? 'https://stage-serv-catalog.sastasundar.com/customer' : 'http://127.0.0.1:3000',
-            appId: null
+            appId: null,
+            // prefer env-provided key; fallback empty to avoid hardcoding secrets
+            chatAppKey: (window.env && (window.env.CHAT_APP_TEMP_TOKEN || window.env.Chat_App_Temp_Token)) || ''
         };
+        console.error(`Chat App Key: ${config.chatAppKey}`);
 
         let agoraClient = null;
         let localAudioTrack = null;
@@ -593,6 +596,8 @@
         };
         let isChatEnabled = false;
         let chatMessages = [];
+        let chatClient = null;
+        let chatLoggedIn = false;
 
         // Update UI based on role selection
         document.querySelectorAll('input[name="userRole"]').forEach(radio => {
@@ -677,6 +682,9 @@
                 if (!agoraClient) {
                     await initializeAgora();
                 }
+
+                // Initialize chat (non-blocking) so text messages can be exchanged
+                ensureChatReady(userId);
 
                 console.log('Onion token genarating');
                 const token = await getToken(channelName, randomUserId);
@@ -876,6 +884,10 @@
                 updateCallUI(false);
                 updateRemoteInfo('✅ Consultation ended');
                 updateChatUI(false);
+                if (chatClient && chatLoggedIn) {
+                    chatClient.close();
+                    chatLoggedIn = false;
+                }
 
                 document.getElementById('roleSelector').style.display = 'flex';
                 updateRoleUI();
@@ -1020,13 +1032,25 @@
 
         async function sendChatMessage(toUserId, message) {
             try {
+                // Prefer Agora Chat SDK if available and logged in
+                if (chatClient && chatLoggedIn) {
+                    const response = await chatClient.sendTextMessage({
+                        chatType: 'singleChat',
+                        to: toUserId.toString(),
+                        msg: message
+                    });
+                    console.log("Chat message sent via Agora Chat SDK:", response);
+                    return response;
+                }
+
+                // Fallback to existing HTTP bridge
                 const payload = {
                     from: currentUserId.toString(),
                     to: toUserId.toString(),
                     message: message
                 };
 
-                console.log("Sending chat message:", payload);
+                console.log("Sending chat message (HTTP fallback):", payload);
 
                 const response = await axios.post(
                     "https://agora-api-qthb.onrender.com/agora/chat",
@@ -1036,7 +1060,7 @@
                     }
                 );
 
-                console.log("Chat Message Sent:", response.data);
+                console.log("Chat Message Sent (HTTP):", response.data);
                 return response.data;
             } catch (err) {
                 console.error("Chat Send Error:", err.response?.data || err.message);
@@ -1047,6 +1071,63 @@
         function updateRemoteInfo(message) {
             const infoDiv = document.getElementById('remoteUserInfo');
             infoDiv.textContent = message;
+        }
+
+        /**
+         * Initialize chat SDK and login with userId.
+         * Non-blocking: errors are logged but do not break RTC flow.
+         */
+        async function ensureChatReady(userId) {
+            if (!config.chatAppKey) {
+                console.warn('Chat App Key missing; chat SDK not initialized.');
+                return;
+            }
+
+            if (!chatClient) {
+                chatClient = new AgoraChat.Client({ appKey: config.chatAppKey });
+                chatClient.addEventHandler('consultation-chat', {
+                    onTextMessage: handleIncomingChatMessage
+                });
+            }
+
+            if (chatLoggedIn) return;
+
+            try {
+                const token = await fetchChatToken(userId);
+                if (!token) throw new Error('Chat token missing');
+
+                await chatClient.open({
+                    user: userId.toString(),
+                    agoraToken: token
+                });
+                chatLoggedIn = true;
+                console.log('✅ Chat client logged in');
+            } catch (err) {
+                console.warn('⚠️ Chat login skipped/failed:', err?.message || err);
+            }
+        }
+
+        async function fetchChatToken(userId) {
+            try {
+                const res = await axios.post(`${config.backendUrl}/chat/token`, {
+                    uid: userId
+                });
+                return res.data?.token || res.data?.accessToken;
+            } catch (err) {
+                console.warn('⚠️ Chat token fetch failed:', err?.response?.data || err?.message);
+                return null;
+            }
+        }
+
+        function handleIncomingChatMessage(message) {
+            if (!message) return;
+
+            const sender = message.from === currentUserId.toString() ? 'You' : `User ${message.from}`;
+            addChatMessage(sender, message.msg);
+
+            if (message.from !== currentUserId.toString()) {
+                openChatModal();
+            }
         }
     </script>
 </body>
