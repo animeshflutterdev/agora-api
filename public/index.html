@@ -863,6 +863,32 @@
             }
         }
 
+        async function sendChatMessage(toUserId, message) {
+            try {
+                const payload = {
+                    from: currentUserId.toString(),
+                    to: toUserId.toString(),
+                    message: message
+                };
+
+                console.log("Sending chat message:", payload);
+
+                const response = await axios.post(
+                    "https://agora-api-qthb.onrender.com/agora/chat",
+                    payload,
+                    {
+                        headers: { "Content-Type": "application/json" }
+                    }
+                );
+
+                console.log("Chat Message Sent:", response.data);
+                return response.data;
+            } catch (err) {
+                console.error("Chat Send Error:", err.response?.data || err.message);
+                throw err;
+            }
+        }
+
         function updateRemoteInfo(message) {
             const infoDiv = document.getElementById('remoteUserInfo');
             infoDiv.textContent = message;

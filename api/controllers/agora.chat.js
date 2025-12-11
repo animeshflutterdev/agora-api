@@ -1,18 +1,18 @@
 require("dotenv").config();
-const axios = require('axios');
+const axios = require("axios");
 
 const AGORA_CHAT_ORG_NAME = process.env.AGORA_CHAT_ORG_NAME;
 const AGORA_CHAT_APP_NAME = process.env.AGORA_CHAT_APP_NAME;
-const AGORA_CHAT_CLIENT_ID = process.env.AGORA_CHAT_CLIENT_ID;
-const AGORA_CHAT_CLIENT_SECRET = process.env.CHAT_CLIENT_SECRET;
+const AGORA_CHAT_CLIENT_ID = process.env.AGORA_CUSTOMER_ID;
+const AGORA_CHAT_CLIENT_SECRET = process.env.AGORA_CUSTOMER_SECRET;
 
 // Agora Chat REST API base URL
-const CHAT_API_BASE = `https://a1.easemob.com/${AGORA_CHAT_ORG_NAME}/${AGORA_CHAT_APP_NAME}`;
+const CHAT_API_BASE = `https://a61.chat.agora.io/${AGORA_CHAT_ORG_NAME}/${AGORA_CHAT_APP_NAME}`;
 
 // Cache for app token
 let appTokenCache = {
     token: null,
-    expiresAt: 0
+    expiresAt: 0,
 };
 
 /**
@@ -27,7 +27,8 @@ exports.getChatAppToken = async (req, res, next) => {
             if (res) {
                 return res.status(500).json({
                     success: false,
-                    message: "Missing AGORA_CHAT_CLIENT_ID or AGORA_CHAT_CLIENT_SECRET in environment variables",
+                    message:
+                        "Missing AGORA_CHAT_CLIENT_ID or AGORA_CHAT_CLIENT_SECRET in environment variables",
                     data: {},
                 });
             }
@@ -35,23 +36,29 @@ exports.getChatAppToken = async (req, res, next) => {
         }
 
         // Return cached token if still valid (when called internally without res)
-        if (!res && appTokenCache.token && Date.now() < appTokenCache.expiresAt - 60000) {
+        if (
+            !res &&
+            appTokenCache.token &&
+            Date.now() < appTokenCache.expiresAt - 60000
+        ) {
             return appTokenCache.token;
         }
 
         const response = await axios.post(`${CHAT_API_BASE}/token`, {
-            grant_type: 'client_credentials',
+            grant_type: "client_credentials",
             client_id: AGORA_CHAT_CLIENT_ID,
-            client_secret: AGORA_CHAT_CLIENT_SECRET
+            client_secret: AGORA_CHAT_CLIENT_SECRET,
         });
+
+        console.log(`Chat-Token response: ${response}`);
 
         const { access_token, expires_in } = response.data;
 
         // Cache the token
         appTokenCache.token = access_token;
-        appTokenCache.expiresAt = Date.now() + (expires_in * 1000);
+        appTokenCache.expiresAt = Date.now() + expires_in * 1000;
 
-        console.log('✅ Chat app token retrieved and cached');
+        console.log("✅ Chat app token retrieved and cached");
 
         // If called as API endpoint, return formatted response
         if (res) {
@@ -62,22 +69,24 @@ exports.getChatAppToken = async (req, res, next) => {
                     timestamp: new Date().toISOString(),
                     accessToken: access_token,
                     expiresIn: expires_in,
-                    privilegeExpiredTs: Math.floor(appTokenCache.expiresAt / 1000)
-                }
+                    privilegeExpiredTs: Math.floor(appTokenCache.expiresAt / 1000),
+                },
             });
         }
 
         // If called internally, return just the token
         return access_token;
-
     } catch (error) {
-        console.error('❌ Failed to get chat app token:', error.response?.data || error.message);
+        console.error(
+            "❌ Failed to get chat app token:",
+            error.response?.data || error.message
+        );
 
         if (res) {
             return res.status(500).json({
                 success: false,
                 message: "Error getting chat app token",
-                error: error.response?.data?.error_description || error.message
+                error: error.response?.data?.error_description || error.message,
             });
         }
 
@@ -88,7 +97,7 @@ exports.getChatAppToken = async (req, res, next) => {
 /**
  * Send Chat Message via REST API
  * POST /agora/chat
- * 
+ *
  * Request Body:
  * {
  *   "from": "senderUserID",
@@ -99,63 +108,69 @@ exports.getChatAppToken = async (req, res, next) => {
  */
 exports.chat = async (req, res) => {
     try {
-        const { from, to, message, chatType = 'users' } = req.body;
+        const { from, to, message, chatType = "users" } = req.body;
 
         // Validate required fields
         if (!from || !to || !message) {
             return res.status(400).json({
                 success: false,
-                message: 'Missing required fields: from, to, message'
+                message: "Missing required fields: from, to, message",
             });
         }
 
         // Get app token using the exported function
-        const appToken = "token";
+        const appToken = "007eJxTYDi3Ulbxud+P+NX3CrXeuQSLeu5advLC8+Xq575Xzr8in7hOgcHExMDEwsI0ycTEzMjEONUoycLCODXJzCgp1cDCNC3V/HeYVWZDICPDx9V1LIwMrAyMDEwMID4DAwAifyAQ";
+        // const appToken = await exports.getChatAppToken();
 
         // Prepare message payload
         const messagePayload = {
             from: from,
             to: [to],
-            type: 'txt',
+            type: "txt",
             body: {
-                msg: message
-            }
+                msg: message,
+            },
+            ext: {
+                em_ignore_notification: true,
+            },
+            routetype: "ROUTE_ONLINE",
+            sync_device: true,
         };
 
-        // Send message via REST API
+        // Send message via REST API using axios.post
         const response = await axios.post(
-            `${CHAT_API_BASE}/${chatType}/messages`,
+            `${CHAT_API_BASE}/messages/users`,
             messagePayload,
             {
                 headers: {
-                    'Authorization': `Bearer ${appToken}`,
-                    'Content-Type': 'application/json'
-                }
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                    Authorization: `Bearer ${appToken}`,
+                },
             }
         );
 
-        console.log(`✅ Message sent from ${from} to ${to}`);
+        console.log("✅ Message sent:", JSON.stringify(response.data));
 
         res.json({
             success: true,
-            message: 'Message sent successfully',
+            message: "Message sent successfully",
             data: {
                 from: from,
                 to: to,
                 messageContent: message,
                 chatType: chatType,
                 messageId: response.data.data?.[to],
-                timestamp: new Date().toISOString()
-            }
+                timestamp: new Date().toISOString(),
+            },
         });
-
     } catch (error) {
-        console.error('❌ Error sending chat message:', error.response?.data);
-        console.error('❌ Error sending chat message 1:', error.message);
+        console.error("❌ Error sending chat message:", error.response?.data);
+        console.error("❌ Error sending chat message 1:", error.message);
         res.status(500).json({
             success: false,
-            message: 'Failed to send message',
-            error: error.response?.data?.error_description || error.message
+            message: "Failed to send message",
+            error: error.response?.data?.error_description || error.message,
         });
     }
 };
@@ -163,7 +178,7 @@ exports.chat = async (req, res) => {
 /**
  * Register Chat User
  * POST /agora/chat/register
- * 
+ *
  * Request Body:
  * {
  *   "username": "user123",
@@ -177,7 +192,7 @@ exports.registerUser = async (req, res) => {
         if (!username || !password) {
             return res.status(400).json({
                 success: false,
-                message: 'Missing required fields: username, password'
+                message: "Missing required fields: username, password",
             });
         }
 
@@ -189,13 +204,13 @@ exports.registerUser = async (req, res) => {
             `${CHAT_API_BASE}/users`,
             {
                 username: username,
-                password: password
+                password: password,
             },
             {
                 headers: {
-                    'Authorization': `Bearer ${appToken}`,
-                    'Content-Type': 'application/json'
-                }
+                    Authorization: `Bearer ${appToken}`,
+                    "Content-Type": "application/json",
+                },
             }
         );
 
@@ -203,16 +218,18 @@ exports.registerUser = async (req, res) => {
 
         res.json({
             success: true,
-            message: 'User registered successfully',
-            data: response.data.entities[0]
+            message: "User registered successfully",
+            data: response.data.entities[0],
         });
-
     } catch (error) {
-        console.error('❌ Error registering user:', error.response?.data || error.message);
+        console.error(
+            "❌ Error registering user:",
+            error.response?.data || error.message
+        );
         res.status(500).json({
             success: false,
-            message: 'Failed to register user',
-            error: error.response?.data?.error_description || error.message
+            message: "Failed to register user",
+            error: error.response?.data?.error_description || error.message,
         });
     }
 };
@@ -220,7 +237,7 @@ exports.registerUser = async (req, res) => {
 /**
  * Get User Token
  * POST /agora/chat/user-token
- * 
+ *
  * Request Body:
  * {
  *   "username": "user123",
@@ -234,7 +251,7 @@ exports.getUserToken = async (req, res) => {
         if (!username || !password) {
             return res.status(400).json({
                 success: false,
-                message: 'Missing required fields: username, password'
+                message: "Missing required fields: username, password",
             });
         }
 
@@ -245,15 +262,15 @@ exports.getUserToken = async (req, res) => {
         const response = await axios.post(
             `${CHAT_API_BASE}/token`,
             {
-                grant_type: 'password',
+                grant_type: "password",
                 username: username,
-                password: password
+                password: password,
             },
             {
                 headers: {
-                    'Authorization': `Bearer ${appToken}`,
-                    'Content-Type': 'application/json'
-                }
+                    Authorization: `Bearer ${appToken}`,
+                    "Content-Type": "application/json",
+                },
             }
         );
 
@@ -261,20 +278,22 @@ exports.getUserToken = async (req, res) => {
 
         res.json({
             success: true,
-            message: 'User token generated successfully',
+            message: "User token generated successfully",
             data: {
                 username: username,
                 accessToken: response.data.access_token,
-                expiresIn: response.data.expires_in
-            }
+                expiresIn: response.data.expires_in,
+            },
         });
-
     } catch (error) {
-        console.error('❌ Error getting user token:', error.response?.data || error.message);
+        console.error(
+            "❌ Error getting user token:",
+            error.response?.data || error.message
+        );
         res.status(500).json({
             success: false,
-            message: 'Failed to get user token',
-            error: error.response?.data?.error_description || error.message
+            message: "Failed to get user token",
+            error: error.response?.data?.error_description || error.message,
         });
     }
 };
@@ -287,19 +306,19 @@ exports.getChatStatus = (req, res) => {
     try {
         res.json({
             success: true,
-            status: 'ready',
+            status: "ready",
             apiBase: CHAT_API_BASE,
             orgName: AGORA_CHAT_ORG_NAME,
             appName: AGORA_CHAT_APP_NAME,
-            message: 'Chat REST API is ready',
-            hasCredentials: !!(AGORA_CHAT_CLIENT_ID && AGORA_CHAT_CLIENT_SECRET)
+            message: "Chat REST API is ready",
+            hasCredentials: !!(AGORA_CHAT_CLIENT_ID && AGORA_CHAT_CLIENT_SECRET),
         });
     } catch (error) {
-        console.error('❌ Error getting chat status:', error);
+        console.error("❌ Error getting chat status:", error);
         res.status(500).json({
             success: false,
-            message: 'Failed to get chat status',
-            error: error.message
+            message: "Failed to get chat status",
+            error: error.message,
         });
     }
 };
