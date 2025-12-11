@@ -119,7 +119,7 @@ exports.chat = async (req, res) => {
         }
 
         // Get app token using the exported function
-        const appToken = "007eJxTYDi3Ulbxud+P+NX3CrXeuQSLeu5advLC8+Xq575Xzr8in7hOgcHExMDEwsI0ycTEzMjEONUoycLCODXJzCgp1cDCNC3V/HeYVWZDICPDx9V1LIwMrAyMDEwMID4DAwAifyAQ";
+        const appToken = `${process.env.Chat_App_Temp_Token}`;
         // const appToken = await exports.getChatAppToken();
 
         // Prepare message payload
