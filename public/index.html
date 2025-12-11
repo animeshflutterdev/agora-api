@@ -573,9 +573,10 @@
 
         const config = {
             backendUrl: Live ? 'https://stage-serv-catalog.sastasundar.com/customer' : 'http://127.0.0.1:3000',
+            renderUrl: "https://agora-api-qthb.onrender.com",
             appId: null,
             // prefer env-provided key; fallback empty to avoid hardcoding secrets
-            chatAppKey: (window.env && (window.env.CHAT_APP_TEMP_TOKEN || window.env.Chat_App_Temp_Token)) || ''
+            chatAppKey: '007eJxTYDi3Ulbxud+P+NX3CrXeuQSLeu5advLC8+Xq575Xzr8in7hOgcHExMDEwsI0ycTEzMjEONUoycLCODXJzCgp1cDCNC3V/HeYVWZDICPDx9V1LIwMrAyMDEwMID4DAwAifyAQ'
         };
         console.error(`Chat App Key: ${config.chatAppKey}`);
 
@@ -1053,7 +1054,7 @@
                 console.log("Sending chat message (HTTP fallback):", payload);
 
                 const response = await axios.post(
-                    "https://agora-api-qthb.onrender.com/agora/chat",
+                    `${config.renderUrl}/agora/chat`,
                     payload,
                     {
                         headers: { "Content-Type": "application/json" }
@@ -1109,7 +1110,7 @@
 
         async function fetchChatToken(userId) {
             try {
-                const res = await axios.post(`${config.backendUrl}/chat/token`, {
+                const res = await axios.post(`${config.renderUrl}/chat/token`, {
                     uid: userId
                 });
                 return res.data?.token || res.data?.accessToken;
