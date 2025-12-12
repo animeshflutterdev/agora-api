@@ -3,7 +3,9 @@ const express = require('express');
 const cors = require("cors");
 const path = require('path');
 const fs = require("fs-extra");
-const crypto = require( 'crypto' );
+const crypto = require('crypto');
+const http = require('http');
+const { initSocket } = require("./api/controllers/socket.init");
 
 const app = express();
 
@@ -12,11 +14,17 @@ const port = process.env.PORT || 4000;
 const SERVER_PUBLIC_URL = `http://${hostname}:${port}`;
 const API_SECRET = 'secret';
 
+const server = http.createServer(app);
+
+// Initialize socket.io once
+initSocket(server);
+
 // Middleware
 app.use(cors());
 // app.use(express.json({ limit: "50mb" }));
-app.use( express.json( { limit: "50mb", verify: ( req, res, buffer ) => { req.rawBody = buffer; } } ) );
+app.use(express.json({ limit: "50mb", verify: (req, res, buffer) => { req.rawBody = buffer; } }));
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static("public"));
 
 // Request logging for debugging
 app.use((req, res, next) => {
@@ -47,29 +55,29 @@ fs.ensureDirSync(uploadFolder);
 // Serve uploaded files statically so the returned URLs are reachable
 app.use('/uploads/agora', express.static(uploadFolder));
 
-app.post( '/webhook', ( req, res ) => {
-	const signature = _generateSignature( req.method, req.url, req.headers[ 'x-cs-timestamp' ], req.rawBody );
+app.post('/webhook', (req, res) => {
+  const signature = _generateSignature(req.method, req.url, req.headers['x-cs-timestamp'], req.rawBody);
   console.log('Generated Signature:', signature);
-  console.log('Received Signature:', req.headers[ 'x-cs-signature' ] );
+  console.log('Received Signature:', req.headers['x-cs-signature']);
 
-	if ( signature !== req.headers[ 'x-cs-signature' ] ) {
-		return res.sendStatus( 401 );
-	}
+  if (signature !== req.headers['x-cs-signature']) {
+    return res.sendStatus(401);
+  }
 
-	console.log( 'received webhook', req.body );
-	res.sendStatus( 200 );
-} );
+  console.log('received webhook', req.body);
+  res.sendStatus(200);
+});
 
-function _generateSignature( method, url, timestamp, body ) {
-	const hmac = crypto.createHmac( 'SHA256', API_SECRET );
+function _generateSignature(method, url, timestamp, body) {
+  const hmac = crypto.createHmac('SHA256', API_SECRET);
 
-	hmac.update( `${ method.toUpperCase() }${ url }${ timestamp }` );
+  hmac.update(`${method.toUpperCase()}${url}${timestamp}`);
 
-	if ( body ) {
-		hmac.update( body );
-	}
+  if (body) {
+    hmac.update(body);
+  }
 
-	return hmac.digest( 'hex' );
+  return hmac.digest('hex');
 }
 
 // --------------------------------------------------------------------------------------
@@ -82,6 +90,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`Agora API listening at ${SERVER_PUBLIC_URL}`);
-});
+// app.listen(port, () => {
+//   console.log(`Agora API listening at ${SERVER_PUBLIC_URL}`);
+// });
+
+server.listen(3000, () => console.log(`Agora API listening at ${SERVER_PUBLIC_URL}`));

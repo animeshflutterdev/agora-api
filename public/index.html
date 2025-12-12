@@ -72,8 +72,8 @@
 
         .video-label {
             position: absolute;
-            top: 20px;
-            left: 20px;
+            right: 20px;
+            bottom: 20px;
             background: rgba(0, 0, 0, 0.8);
             color: white;
             padding: 10px 20px;
@@ -85,8 +85,8 @@
 
         .role-badge {
             position: absolute;
-            top: 20px;
-            right: 20px;
+             right: 20px;
+            bottom: 20px;
             padding: 8px 16px;
             border-radius: 6px;
             font-size: 12px;
@@ -538,13 +538,13 @@
 
             <!-- Chat Controls -->
             <div class="button-group" style="margin-top: 10px;">
-                <input type="text" id="chatMessageInput" placeholder="Type a message..."
-                    style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ddd;" disabled>
-                <button class="btn-primary" id="chatSendBtn" onclick="sendQuickMessage()" disabled>Send Message</button>
+                <!-- <input type="text" id="chatMessageInput" placeholder="Type a message..."
+                    style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ddd;" disabled> -->
+                <button class="btn-primary" id="chatSendBtn" onclick="openChatPopup()" >Chat</button>
             </div>
 
             <!-- Chat Modal -->
-            <div class="chat-modal-overlay" id="chatModal">
+            <!-- <div class="chat-modal-overlay" id="chatModal">
                 <div class="chat-modal">
                     <div class="chat-modal-header">
                         <span>Consultation Chat</span>
@@ -552,19 +552,19 @@
                     </div>
                     <div class="chat-modal-body" id="chatMessagesList">
                         <!-- Messages will be appended here -->
-                    </div>
-                    <div class="chat-modal-footer">
-                        <input type="text" id="chatModalInput" placeholder="Type a message...">
-                        <button class="btn-primary" onclick="sendMessageFromModal()">Send</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Remote User Info -->
-            <div class="remote-info" id="remoteUserInfo">
-                ⏳ Waiting for the other person to join...
-            </div>
         </div>
+        <!-- <div class="chat-modal-footer">
+            <input type="text" id="chatModalInput" placeholder="Type a message...">
+            <button class="btn-primary" onclick="sendMessageFromModal()">Send</button>
+        </div> -->
+    </div>
+    </div> -->
+
+    <!-- Remote User Info -->
+    <div class="remote-info" id="remoteUserInfo">
+        ⏳ Waiting for the other person to join...
+    </div>
+    </div>
     </div>
     </div>
 
@@ -1134,6 +1134,30 @@
             if (message.from !== currentUserId.toString()) {
                 openChatModal();
             }
+        }
+
+        function openChatPopup() {
+            // Get current user's ID
+            const myId = currentUserId;
+            
+            // Get the other user's ID from remoteUsers
+            // remoteUsers is an object with UIDs as keys
+            const remoteUserIds = Object.keys(remoteUsers);
+            const chatWith = remoteUserIds.length > 0 ? remoteUserIds[0] : null;
+            
+            // If joining as doctor: myId is doctor's id, chatWith is patient's id
+            // If joining as patient: myId is patient's id, chatWith is doctor's id
+            if (!chatWith) {
+                console.warn('⚠️ No remote user found for chat');
+                alert('Please wait for the other participant to join the call');
+                return;
+            }
+
+            window.open(
+                `chat.html?myId=${myId}&chatWith=${chatWith}`,
+                "ChatWindow",
+                "width=420,height=650,right=0,bottom=0,resizable=no,scrollbars=no,status=no"
+            );
         }
     </script>
 </body>

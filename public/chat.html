@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>One-to-One Chat</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Socket.io -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+    <style>
+        body {
+            background: #f0f2f5;
+        }
+
+        #chat-box {
+            height: 450px;
+            overflow-y: auto;
+            padding: 15px;
+            background: #fff;
+            border-radius: 10px;
+        }
+
+        .msg-self {
+            text-align: right;
+        }
+
+        .msg-self .bubble {
+            background: #0d6efd;
+            color: white;
+            display: inline-block;
+            padding: 8px 12px;
+            border-radius: 15px;
+            margin: 4px 0;
+        }
+
+        .msg-other .bubble {
+            background: #e9ecef;
+            padding: 8px 12px;
+            border-radius: 15px;
+            margin: 4px 0;
+            display: inline-block;
+        }
+
+        #typing {
+            font-size: 12px;
+            font-style: italic;
+            color: gray;
+            padding-left: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container py-5" id="login-screen">
+        <div class="row justify-content-center">
+            <div class="col-md-6 bg-white p-4 rounded shadow">
+                <h4 class="text-center mb-3">Enter Chat</h4>
+
+                <div class="mb-3">
+                    <label>Your User ID</label>
+                    <input type="text" id="myId" class="form-control" placeholder="e.g. userA" required>
+                </div>
+
+                <div class="mb-3">
+                    <label>Chat With User</label>
+                    <input type="text" id="chatWith" class="form-control" placeholder="e.g. userB" required>
+                </div>
+
+                <button class="btn btn-primary w-100" onclick="startChat()">Start Chat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Screen -->
+    <div class="container py-4 d-none" id="chat-screen">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <strong>Chat with: <span id="chat-name"></span></strong>
+                    </div>
+
+                    <div class="card-body" id="chat-box"></div>
+
+                    <div id="typing"></div>
+
+                    <div class="card-footer">
+                        <div class="input-group">
+                            <input id="msgInput" type="text" class="form-control" placeholder="Type a message...">
+                            <button class="btn btn-primary" onclick="sendMsg()">Send</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let myId = "";
+        let chatWith = "";
+        let typingTimeout = null;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlMyId = urlParams.get('myId');
+        const urlChatWith = urlParams.get('chatWith');
+
+        if (urlMyId && urlChatWith) {
+            document.getElementById("myId").value = urlMyId;
+            document.getElementById("chatWith").value = urlChatWith;
+            // Short delay to ensure socket.io is ready if needed, or just call directly
+            setTimeout(startChat, 100);
+        }
+
+        function startChat() {
+            myId = document.getElementById("myId").value.trim();
+            chatWith = document.getElementById("chatWith").value.trim();
+
+            if (!myId || !chatWith) {
+                alert("Please enter both your ID and the receiver ID.");
+                return;
+            }
+
+            document.getElementById("login-screen").classList.add("d-none");
+            document.getElementById("chat-screen").classList.remove("d-none");
+            document.getElementById("chat-name").innerText = chatWith;
+
+            socket = io();
+
+            socket.emit("register", myId);
+
+            socket.on("receive_message", (msg) => {
+                addMessage(msg.message, false);
+            });
+
+            socket.on("typing", (fromUser) => {
+                document.getElementById("typing").innerText = fromUser + " is typing...";
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => {
+                    document.getElementById("typing").innerText = "";
+                }, 1200);
+            });
+        }
+
+        function sendMsg() {
+            const msg = document.getElementById("msgInput").value.trim();
+            if (!msg) return;
+
+            socket.emit("send_message", {
+                from: myId,
+                to: chatWith,
+                message: msg
+            });
+
+            addMessage(msg, true);
+            document.getElementById("msgInput").value = "";
+        }
+
+        function addMessage(message, isSelf) {
+            const box = document.getElementById("chat-box");
+            const wrapper = document.createElement("div");
+
+            wrapper.className = isSelf ? "msg-self" : "msg-other";
+            wrapper.innerHTML = `<div class="bubble">${message}</div>`;
+
+            box.appendChild(wrapper);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        // Typing event
+        document.addEventListener("input", () => {
+            if (socket && myId && chatWith) {
+                socket.emit("typing", { from: myId, to: chatWith });
+            }
+        });
+    </script>
+
+</body>
+
+</html>
